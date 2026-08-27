@@ -1,0 +1,14 @@
+com\redsocial\dao\GenericDAO.class
+com\redsocial\model\Editable.class
+com\redsocial\model\Reactionable.class
+com\redsocial\model\User.class
+com\redsocial\model\Short_video.class
+com\redsocial\dao\UserDAO.class
+com\redsocial\model\Carrousel.class
+com\redsocial\model\Message.class
+com\redsocial\model\UserList.class
+com\redsocial\model\Reaction.class
+com\redsocial\model\Post.class
+com\redsocial\model\ReactionType.class
+com\redsocial\model\Chat.class
+com\redsocial\model\Comment.class
