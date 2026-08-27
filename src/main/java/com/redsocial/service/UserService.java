@@ -35,7 +35,7 @@ public class UserService {
             User newUser = new User(name, email, password);
             
             // 5. Regla de negocio: Todo usuario nace con una lista "liked" por defecto
-            UserList likedList = new UserList("Favoritos", "Publicaciones que me gustan");
+            UserList likedList = new UserList("Favoritos");
             newUser.setLiked(likedList);
 
             // 6. Persistir usando el DAO
@@ -77,10 +77,7 @@ public class UserService {
             }
 
             // Registrar el seguimiento bidireccional si no lo sigue ya
-            if (!currentUser.getFollowedBy().contains(targetUser)) {
-                currentUser.getFollowedBy().add(targetUser);
-                targetUser.getFollowers().add(currentUser);
-            }
+            targetUser.notifyFollow(currentUser);
 
             // En un flujo real de JPA, al estar dentro de una transacción, 
             // no es estrictamente necesario llamar a userDAO.update(), las entidades "managed" se actualizan solas al hacer commit.

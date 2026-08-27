@@ -49,7 +49,9 @@ public class User implements Serializable {
 
     public void notifyFollow(User user) {
         // Implementación de notificación
+        if (!this.followed_by.contains(user)) {
         this.followed_by.add(user);
+        }
     }
 
     public void block(User user) {

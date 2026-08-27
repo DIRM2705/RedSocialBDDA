@@ -19,7 +19,9 @@ public class UserList implements Serializable {
     @ManyToMany
     private List<Post> posts = new ArrayList<>();
 
-    public UserList() {}
+    public UserList(String name) {
+        this.name = name;
+    }
 
     public void addPost(Post post) {
         if (!this.posts.contains(post)) {
