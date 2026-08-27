@@ -4,9 +4,9 @@
  */
 package com.redsocial.service;
 
-import com.redsocial.dao.CommentDao;
-import com.redsocial.dao.PostDao;
-import com.redsocial.dao.UserDao;
+import com.redsocial.dao.CommentDAO;
+import com.redsocial.dao.PostDAO;
+import com.redsocial.dao.UserDAO;
 import com.redsocial.model.Comment;
 import com.redsocial.model.Post;
 import com.redsocial.model.User;
@@ -15,14 +15,14 @@ import javax.persistence.EntityManager;
 
 public class CommentService {
 
-    private final CommentDao commentDao;
-    private final PostDao postDao;
-    private final UserDao userDao;
+    private final CommentDAO commentDao;
+    private final PostDAO postDao;
+    private final UserDAO userDao;
 
     public CommentService() {
-        this.commentDao = new CommentDao();
-        this.postDao = new PostDao();
-        this.userDao = new UserDao();
+        this.commentDao = new CommentDAO();
+        this.postDao = new PostDAO();
+        this.userDao = new UserDAO();
     }
 
     /**

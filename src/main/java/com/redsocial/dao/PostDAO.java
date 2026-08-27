@@ -15,9 +15,9 @@ import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-public class PostDao extends GenericDAO<Post, Long> {
+public class PostDAO extends GenericDAO<Post, Long> {
 
-    public PostDao() {
+    public PostDAO() {
         super(Post.class);
     }
 

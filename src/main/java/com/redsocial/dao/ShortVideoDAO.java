@@ -9,7 +9,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
-public class ShortVideoDao extends GenericDAO<Short_video, Long> {
+public class ShortVideoDAO extends GenericDAO<Short_video, Long> {
 
     public ShortVideoDao() {
         super(Short_video.class);

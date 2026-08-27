@@ -33,11 +33,6 @@ public class PostService {
                 throw new IllegalArgumentException("El autor no existe.");
             }
 
-            // 2.¿El usuario está suspendido? 
-            if (author.isSuspended()) {
-                throw new IllegalStateException("El usuario está suspendido y no puede publicar.");
-            }
-
             // 3. Crear el post y asociarlo
             Post newPost = new Post(content, author);
             
