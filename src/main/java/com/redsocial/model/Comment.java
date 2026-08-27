@@ -10,6 +10,11 @@ public class Comment extends Editable {
     @GeneratedValue
     private long id;
 
+    public void Report() {
+        // Lógica para reportar el comentario
+        System.out.println("Comentario reportado: " + id);
+    }
+
     public Comment() { super(); }
 
     public long getId() { return id; }
