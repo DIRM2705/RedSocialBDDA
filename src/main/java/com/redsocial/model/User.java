@@ -30,7 +30,7 @@ public class User implements Serializable {
     private List<User> blocked = new ArrayList<>();
 
     @OneToOne(cascade = CascadeType.ALL)
-    private UserList liked;
+    private UserList liked = new UserList("Favoritos");
 
     @OneToMany(cascade = CascadeType.ALL)
     private List<UserList> custom_lists = new ArrayList<>();

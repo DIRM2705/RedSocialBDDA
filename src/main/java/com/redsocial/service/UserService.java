@@ -22,26 +22,12 @@ public class UserService {
         EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         
         try {
-            // 2. Iniciar la transacción
+            // Iniciar la transacción
             em.getTransaction().begin();
 
-            // 3. Regla de negocio: El correo no debe estar repetido
-            User existingUser = userDAO.findByEmail(em, email);
-            if (existingUser != null) {
-                throw new IllegalArgumentException("El correo electrónico ya está registrado.");
-            }
+            userDAO.createUser(em, name, email, password);
 
-            // 4. Crear la entidad
-            User newUser = new User(name, email, password);
-            
-            // 5. Regla de negocio: Todo usuario nace con una lista "liked" por defecto
-            UserList likedList = new UserList("Favoritos");
-            newUser.setLiked(likedList);
-
-            // 6. Persistir usando el DAO
-            userDAO.create(em, newUser);
-
-            // 7. Confirmar la transacción
+            // Confirmar la transacción
             em.getTransaction().commit();
             
         } catch (Exception e) {
@@ -83,6 +69,84 @@ public class UserService {
             // no es estrictamente necesario llamar a userDAO.update(), las entidades "managed" se actualizan solas al hacer commit.
             
             em.getTransaction().commit();
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
+
+    public void blockUser(long currentUserId, long targetUserId) {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            User currentUser = userDAO.findById(em, currentUserId);
+            User targetUser = userDAO.findById(em, targetUserId);
+
+            if (currentUser == null || targetUser == null) {
+                throw new IllegalArgumentException("Uno o ambos usuarios no existen.");
+            }
+
+            // Regla de negocio: No permitir bloquear a uno mismo
+            if (currentUserId == targetUserId) {
+                throw new IllegalArgumentException("No puedes bloquearte a ti mismo.");
+            }
+
+            currentUser.block(targetUser);
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
+
+    public void unblockUser(long currentUserId, long targetUserId) {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            User currentUser = userDAO.findById(em, currentUserId);
+            User targetUser = userDAO.findById(em, targetUserId);
+
+            if (currentUser == null || targetUser == null) {
+                throw new IllegalArgumentException("Uno o ambos usuarios no existen.");
+            }
+
+            currentUser.unblock(targetUser);
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
+
+    public void unfollowUser(long currentUserId, long targetUserId) {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            User currentUser = userDAO.findById(em, currentUserId);
+            User targetUser = userDAO.findById(em, targetUserId);
+
+            if (currentUser == null || targetUser == null) {
+                throw new IllegalArgumentException("Uno o ambos usuarios no existen.");
+            }
+
+            // Registrar el "unfollow" bidireccional si es que actualmente sigue
+            targetUser.notifyUnfollow(currentUser);
+
+            em.getTransaction().commit();
+
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
