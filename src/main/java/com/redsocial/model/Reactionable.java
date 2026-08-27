@@ -3,6 +3,7 @@ package com.redsocial.model;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.CascadeType;
+import javax.persistence.JoinColumn;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.OneToMany;
 
@@ -10,6 +11,7 @@ import javax.persistence.OneToMany;
 public abstract class Reactionable extends Editable {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "reactionable_id") // Esto evita la tabla intermedia indeseada
     protected List<Reaction> reactions = new ArrayList<>();
 
     public void addReaction(Reaction reaction) {

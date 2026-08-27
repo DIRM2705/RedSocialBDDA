@@ -2,6 +2,7 @@ package com.redsocial.model;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
@@ -14,11 +15,12 @@ public abstract class Editable implements Serializable {
     protected User user;
 
     protected String content;
-    protected LocalDateTime creation_time;
+    @Column(name = "creationTime") 
+    protected LocalDateTime creationTime; // Nombre en Java
     protected boolean edited;
 
     public Editable() {
-        this.creation_time = LocalDateTime.now();
+        this.creationTime = LocalDateTime.now();
         this.edited = false;
     }
 
@@ -32,8 +34,8 @@ public abstract class Editable implements Serializable {
     public void setUser(User user) { this.user = user; }
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
-    public LocalDateTime getCreation_time() { return creation_time; }
-    public void setCreation_time(LocalDateTime creation_time) { this.creation_time = creation_time; }
+    public LocalDateTime getCreation_time() { return creationTime; }
+    public void setCreation_time(LocalDateTime creation_time) { this.creationTime = creation_time; }
     public boolean isEdited() { return edited; }
     public void setEdited(boolean edited) { this.edited = edited; }
 }

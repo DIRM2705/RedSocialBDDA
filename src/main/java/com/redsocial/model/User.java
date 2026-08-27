@@ -12,12 +12,12 @@ public class User implements Serializable {
     @Id
     @GeneratedValue
     private long id;
-
     private String name;
     private String email;
     private String password;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    // Asegura que al borrar un User, se borren sus Posts[cite: 2]
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Post> posts = new ArrayList<>();
 
     @ManyToMany
@@ -30,10 +30,12 @@ public class User implements Serializable {
     private List<User> blocked = new ArrayList<>();
 
     @OneToOne(cascade = CascadeType.ALL)
-    private UserList liked = new UserList("Favoritos");
+    private UserList liked;
 
     @OneToMany(cascade = CascadeType.ALL)
     private List<UserList> custom_lists = new ArrayList<>();
+
+    public User() {}
 
     public User(String name, String email, String password) {
         this.name = name;
@@ -48,9 +50,8 @@ public class User implements Serializable {
     }
 
     public void notifyFollow(User user) {
-        // Implementación de notificación
         if (!this.followed_by.contains(user)) {
-        this.followed_by.add(user);
+            this.followed_by.add(user);
         }
     }
 

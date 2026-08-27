@@ -7,19 +7,27 @@ import javax.persistence.*;
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Post extends Reactionable {
+
     @Id
     @GeneratedValue
     private long id;
-
+    
     private String title;
 
     @ElementCollection
     private List<String> tags = new ArrayList<>();
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    // CORRECCIÓN CLAVE: mappedBy evita la tabla intermedia innecesaria[cite: 2]
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comment = new ArrayList<>();
 
     public Post() { super(); }
+
+    public Post(String content, User author) {
+        super();
+        this.content = content;
+        this.user = author;
+    }
 
     public void share() {
         // Lógica de compartición
