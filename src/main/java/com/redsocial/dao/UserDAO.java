@@ -1,6 +1,7 @@
 package com.redsocial.dao;
 
 import com.redsocial.model.User;
+import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.TypedQuery;
@@ -15,21 +16,10 @@ public class UserDAO extends GenericDAO<User, Long> {
     /**
      * Busca un usuario por su correo electrónico.
      * Retorna null si no existe.
+     * @param em
+     * @param email
+     * @return 
      */
-    public User createUser(EntityManager em, String name, String email, String password) {
-        String query = "SELECT COUNT(*) FROM User u WHERE u.email = :email";
-        Long count = em.createQuery(query, Long.class)
-                       .setParameter("email", email)
-                       .getSingleResult();
-        if (count > 0) {
-            throw new IllegalArgumentException("El correo electrónico ya está registrado.");
-        }
-        
-        User user = new User(name, email, password);
-        create(em, user);
-        return user;
-    }
-
     public User findByEmail(EntityManager em, String email) {
         try {
             String jpql = "SELECT u FROM User u WHERE u.email = :email";
@@ -41,4 +31,18 @@ public class UserDAO extends GenericDAO<User, Long> {
             return null; 
         }
     }
+    public List<User> searchUsers(EntityManager em, String keyword) {
+    // Usa LIKE para autocompletar nombres. Equivalente a un LIKE en T-SQL.
+    String jpql = "SELECT u FROM User u WHERE LOWER(u.name) LIKE LOWER(:keyword)";
+    return em.createQuery(jpql, User.class)
+             .setParameter("keyword", "%" + keyword + "%")
+             .getResultList();
+}
+    public List<User> findFollowers(EntityManager em, Long userId) {
+    // Navega por la colección followed_by usando un JOIN implícito
+    String jpql = "SELECT f FROM User u JOIN u.followed_by f WHERE u.id = :userId";
+    return em.createQuery(jpql, User.class)
+             .setParameter("userId", userId)
+             .getResultList();
+}
 }

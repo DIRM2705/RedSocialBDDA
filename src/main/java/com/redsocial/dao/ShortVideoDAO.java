@@ -11,7 +11,7 @@ import java.util.List;
 
 public class ShortVideoDAO extends GenericDAO<Short_video, Long> {
 
-    public ShortVideoDao() {
+    public ShortVideoDAO() {
         super(Short_video.class);
     }
 

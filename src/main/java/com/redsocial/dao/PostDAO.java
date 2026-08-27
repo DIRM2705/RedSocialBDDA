@@ -8,8 +8,6 @@ package com.redsocial.dao;
  *
  * @author Alan
  */
-
-
 import com.redsocial.model.Post;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
@@ -28,4 +26,18 @@ public class PostDAO extends GenericDAO<Post, Long> {
         query.setMaxResults(limit); // Limita la cantidad de resultados
         return query.getResultList();
     }
+    public List<Post> findPostsByTags(EntityManager em, List<String> tags) {
+    // Cruza la colección de elementos (tags) para encontrar coincidencias
+    String jpql = "SELECT DISTINCT p FROM Post p JOIN p.tags t WHERE t IN :tags ORDER BY p.creationTime DESC";
+    return em.createQuery(jpql, Post.class)
+             .setParameter("tags", tags)
+             .getResultList();
+}
+    public List<Post> findTrendingPosts(EntityManager em, int limit) {
+    // Usa la función SIZE() de JPQL para ordenar por la cantidad de reacciones
+    String jpql = "SELECT p FROM Post p ORDER BY SIZE(p.reactions) DESC";
+    return em.createQuery(jpql, Post.class)
+             .setMaxResults(limit)
+             .getResultList();
+}
 }
