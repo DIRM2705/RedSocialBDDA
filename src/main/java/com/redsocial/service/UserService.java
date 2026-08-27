@@ -1,50 +1,62 @@
 package com.redsocial.service;
 
 import com.redsocial.dao.UserDAO;
+import com.redsocial.dao.CommentDAO;
+import com.redsocial.model.Comment;
 import com.redsocial.model.UserList;
 import com.redsocial.model.User;
 import com.redsocial.util.JPAUtil;
+import java.util.List;
 import javax.persistence.EntityManager;
 
 public class UserService {
-
     private final UserDAO userDAO;
+    private final CommentDAO commentDAO;
 
     public UserService() {
         this.userDAO = new UserDAO();
+        this.commentDAO = new CommentDAO();
     }
 
-    /**
-     * Registra un nuevo usuario aplicando las reglas de negocio.
-     */
     public void registerUser(String name, String email, String password) {
-        // 1. Obtener el gestor de la base de datos a través de nuestro utilitario
+        // 1. Validar correo electrónico (evita vacíos alrededor del punto)
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$")) {
+            throw new IllegalArgumentException("Formato de correo inválido. Debe contener un dominio válido (ej. usuario@dominio.com).");
+        }
+
+        // 2. Validar contraseña (Mínimo 8 caracteres, 1 número, 1 mayúscula)
+        if (!password.matches("^(?=.*[A-Z])(?=.*\\d).{8,}$")) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres, un número y una mayúscula.");
+        }
+
         EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         
         try {
-            // Iniciar la transacción
             em.getTransaction().begin();
 
-            userDAO.createUser(em, name, email, password);
+            User existingUser = userDAO.findByEmail(em, email);
+            if (existingUser != null) {
+                throw new IllegalArgumentException("El correo electrónico ya está registrado.");
+            }
 
-            // Confirmar la transacción
+            User newUser = new User(name, email, password);
+            
+            UserList likedList = new UserList("Favoritos");
+            newUser.setLiked(likedList);
+
+            userDAO.create(em, newUser);
             em.getTransaction().commit();
             
         } catch (Exception e) {
-            // Si algo falla, revertimos los cambios en la base de datos
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-            throw e; // Relanzamos la excepción para que el Controller la maneje
+            throw e; 
         } finally {
-            // Siempre liberar los recursos
             em.close();
         }
     }
     
-    /**
-     * Permite a un usuario seguir a otro.
-     */
     public void followUser(long currentUserId, long targetUserId) {
         EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
@@ -57,96 +69,56 @@ public class UserService {
                 throw new IllegalArgumentException("Uno o ambos usuarios no existen.");
             }
 
-            // Regla de negocio: Verificar si hay bloqueos
             if (targetUser.getBlocked().contains(currentUser) || currentUser.getBlocked().contains(targetUser)) {
                 throw new IllegalStateException("Acción denegada debido a un bloqueo.");
             }
 
-            // Registrar el seguimiento bidireccional si no lo sigue ya
             targetUser.notifyFollow(currentUser);
+            em.getTransaction().commit();
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
+    
+    public void deleteUser(long userId) {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
+        try {
+            em.getTransaction().begin();
+            User user = userDAO.findById(em, userId);
+            
+            if (user == null) {
+                throw new IllegalArgumentException("El usuario no existe.");
+            }
 
-            // En un flujo real de JPA, al estar dentro de una transacción, 
-            // no es estrictamente necesario llamar a userDAO.update(), las entidades "managed" se actualizan solas al hacer commit.
+            // 3. USO CORRECTO DEL PATRÓN DAO: Delegamos la consulta a CommentDAO
+            List<Comment> userComments = commentDAO.findCommentsByUser(em, userId);
+                                           
+            for (Comment c : userComments) {
+                // Desvincular de la memoria
+                if (c.getPost() != null) {
+                    c.getPost().getComment().remove(c);
+                }
+                // Delegamos la eliminación física al DAO genérico
+                commentDAO.delete(em, c); 
+            }
+
+            // Integridad de seguidores/seguidos
+            for (User followed : user.getFollowed_by()) {
+                followed.getFollowers().remove(user);
+            }
+            
+            for (User follower : user.getFollowers()) {
+                follower.getFollowed_by().remove(user);
+            }
+
+            userDAO.delete(em, user);
             
             em.getTransaction().commit();
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } finally {
-            em.close();
-        }
-    }
-
-    public void blockUser(long currentUserId, long targetUserId) {
-        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
-        try {
-            em.getTransaction().begin();
-
-            User currentUser = userDAO.findById(em, currentUserId);
-            User targetUser = userDAO.findById(em, targetUserId);
-
-            if (currentUser == null || targetUser == null) {
-                throw new IllegalArgumentException("Uno o ambos usuarios no existen.");
-            }
-
-            // Regla de negocio: No permitir bloquear a uno mismo
-            if (currentUserId == targetUserId) {
-                throw new IllegalArgumentException("No puedes bloquearte a ti mismo.");
-            }
-
-            currentUser.block(targetUser);
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } finally {
-            em.close();
-        }
-    }
-
-    public void unblockUser(long currentUserId, long targetUserId) {
-        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
-        try {
-            em.getTransaction().begin();
-
-            User currentUser = userDAO.findById(em, currentUserId);
-            User targetUser = userDAO.findById(em, targetUserId);
-
-            if (currentUser == null || targetUser == null) {
-                throw new IllegalArgumentException("Uno o ambos usuarios no existen.");
-            }
-
-            currentUser.unblock(targetUser);
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
-        } finally {
-            em.close();
-        }
-    }
-
-    public void unfollowUser(long currentUserId, long targetUserId) {
-        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
-        try {
-            em.getTransaction().begin();
-
-            User currentUser = userDAO.findById(em, currentUserId);
-            User targetUser = userDAO.findById(em, targetUserId);
-
-            if (currentUser == null || targetUser == null) {
-                throw new IllegalArgumentException("Uno o ambos usuarios no existen.");
-            }
-
-            // Registrar el "unfollow" bidireccional si es que actualmente sigue
-            targetUser.notifyUnfollow(currentUser);
-
-            em.getTransaction().commit();
-
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
