@@ -380,8 +380,10 @@ public class MainFrame extends JFrame {
         formPanel.add(new JLabel("Contraseña:")); formPanel.add(txtPassword);
         formPanel.add(new JLabel()); formPanel.add(btnRegister);
 
-        DefaultTableModel tableModel = new DefaultTableModel(new String[]{"Nombre", "Email"}, 0);
+        DefaultTableModel tableModel = new DefaultTableModel(new String[]{"ID", "Nombre", "Email"}, 0);
         JTable table = new JTable(tableModel);
+
+        table.removeColumn(table.getColumnModel().getColumn(0));
         
         JPanel bottomPanel = new JPanel();
         JButton btnDelete = new JButton("Eliminar Seleccionado");
@@ -408,7 +410,10 @@ public class MainFrame extends JFrame {
         btnDelete.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row != -1) {
-                long userId = (long) table.getValueAt(row, 0);
+                // CORRECCIÓN AQUÍ: Se usa getModel() para leer el ID oculto
+                String valorCelda = table.getModel().getValueAt(row, 0).toString();
+                Long userId = Long.parseLong(valorCelda);
+
                 try {
                     userService.deleteUser(userId);
                     JOptionPane.showMessageDialog(this, "Usuario eliminado.");
@@ -430,7 +435,8 @@ public class MainFrame extends JFrame {
         EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
             for (User u : userDAO.findAll(em)) {
-                model.addRow(new Object[]{u.getName(), u.getEmail()});
+                // CORRECCIÓN AQUÍ: Se agregó u.getId() al inicio del arreglo
+                model.addRow(new Object[]{u.getId(), u.getName(), u.getEmail()});
             }
         } finally {
             em.close();
