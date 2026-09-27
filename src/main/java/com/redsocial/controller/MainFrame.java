@@ -67,7 +67,7 @@ public class MainFrame extends JFrame {
         try {
             List<User> users = userDAO.findAll(em);
             for (User u : users) {
-                combo.addItem(new UserComboItem(u.getId(), u.getName()));
+                combo.addItem(new UserComboItem(u.getId(), u.getUsername()));
             }
         } finally {
             em.close();
@@ -107,15 +107,15 @@ public class MainFrame extends JFrame {
     private void refreshFeed() {
         feedContainer.removeAll();
         EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
-        try {
-            List<Post> posts = postDAO.findAll(em);
+        /*try {
+            List<Post> posts = postDAO.findAll();
             for (int i = posts.size() - 1; i >= 0; i--) {
                 feedContainer.add(createPostCard(posts.get(i)));
                 feedContainer.add(Box.createRigidArea(new Dimension(0, 10))); 
             }
         } finally {
             em.close();
-        }
+        }*/
         feedContainer.revalidate();
         feedContainer.repaint();
     }
@@ -131,7 +131,7 @@ public class MainFrame extends JFrame {
 
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
-        String autorNombre = post.getUser() != null ? post.getUser().getName() : "Usuario Desconocido";
+        String autorNombre = post.getUser() != null ? post.getUser().getUsername() : "Usuario Desconocido";
         JLabel lblAutor = new JLabel("Autor: " + autorNombre);
         lblAutor.setFont(new Font("Arial", Font.BOLD, 14));
         
@@ -317,7 +317,7 @@ public class MainFrame extends JFrame {
         // Cabecera del comentario
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
-        String autorNombre = comment.getUser() != null ? comment.getUser().getName() : "Desconocido";
+        String autorNombre = comment.getUser().getUsername() != null ? comment.getUser().getUsername() : "Desconocido";
         JLabel lblAutor = new JLabel(autorNombre);
         lblAutor.setFont(new Font("Arial", Font.BOLD, 12));
         lblAutor.setForeground(new Color(50, 50, 150));
@@ -436,7 +436,7 @@ public class MainFrame extends JFrame {
         try {
             for (User u : userDAO.findAll(em)) {
                 // CORRECCIÓN AQUÍ: Se agregó u.getId() al inicio del arreglo
-                model.addRow(new Object[]{u.getId(), u.getName(), u.getEmail()});
+                model.addRow(new Object[]{u.getId(), u.getUsername(), u.getEmail()});
             }
         } finally {
             em.close();

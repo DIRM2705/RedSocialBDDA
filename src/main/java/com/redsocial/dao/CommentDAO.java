@@ -5,33 +5,157 @@
 package com.redsocial.dao;
 
 import com.redsocial.model.Comment;
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-import java.util.List;
+import org.xmldb.api.base.Collection;
+import org.xmldb.api.base.XMLDBException;
+import org.xmldb.api.modules.XQueryService;
 
-public class CommentDAO extends GenericDAO<Comment, Long> {
+public class CommentDAO extends PostDAO
+{
+    public void createComment(long idPost, Comment comment) throws XMLDBException {
 
-    public CommentDAO() {
-        super(Comment.class);
+        Collection collection = db.getCollection(POST_COLLECTION_PATH);
+
+        XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
+
+        String query = """
+                xquery version "3.1";
+                
+                declare namespace p = "http://red-social.org/post";
+                
+                let $post := collection("/db/red-social/posts")/p:post[
+                    p:id = $idPost
+                ]
+                
+                let $ultimoId :=
+                    if (exists($post/p:comentarios/p:comentario/p:id))
+                    then max(
+                        $post/p:comentarios/p:comentario/p:id
+                    )
+                    else 0
+                
+                let $nuevoId := $ultimoId + 1
+                
+                return
+                if (exists($post/p:comentarios)) then
+                
+                    update insert
+                        <p:comentario>
+                            <p:id>{$nuevoId}</p:id>
+                            <p:idAutor>{$authorID}</p:idAutor>
+                            <p:contenido>{$contenido}</p:contenido>
+                        </p:comentarios>
+                    into $post/p:comentarios
+                
+                else
+                
+                    update insert
+                        <p:comentarios>
+                            <p:comentario>
+                                <p:id>{$nuevoId}</p:id>
+                                <p:contenido>{$contenido}</p:contenido>
+                            </p:comentario>
+                        </p:comentarios>
+                    into $post
+                """;
+
+        xqs.declareVariable("idPost", idPost);
+        xqs.declareVariable("contenido", comment.getContent());
+        xqs.declareVariable("authorID", comment.getAuthorId());
+
+        xqs.query(query);
+        db.closeCollection(collection);
     }
 
-    // Método específico: Obtener comentarios paginados de un Post
-    public List<Comment> findCommentsByPostPaginated(EntityManager em, Long postId, int pageNumber, int pageSize) {
-        String jpql = "SELECT c FROM Comment c WHERE c.post.id = :postId ORDER BY c.createdAt ASC";
-        TypedQuery<Comment> query = em.createQuery(jpql, Comment.class);
-        query.setParameter("postId", postId);
-        
-        // Lógica de paginación
-        query.setFirstResult((pageNumber - 1) * pageSize); // Offset (desde dónde empezar)
-        query.setMaxResults(pageSize); // Limit (cuántos traer)
-        
-        return query.getResultList();
+    public void updateComment(long idPost, long idComentario, String nuevoContenido)
+            throws XMLDBException {
+
+        Collection collection = db.getCollection(POST_COLLECTION_PATH);
+
+        XQueryService xqs =
+                (XQueryService) collection.getService(
+                        "XQueryService",
+                        "1.0"
+                );
+
+        String query = """
+                xquery version "3.1";
+                
+                declare namespace p = "http://red-social.org/post";
+                
+                let $post := collection("/db/red-social/posts")/p:post[
+                    p:id = $idPost
+                ]
+                
+                return update replace
+                    $post/p:comentarios/p:comentario[
+                        p:id = $idComentario
+                    ]/p:contenido
+                with <p:contenido>{$nuevoContenido}</p:contenido>
+                """;
+
+        xqs.declareVariable("idPost", idPost);
+        xqs.declareVariable("idComentario", idComentario);
+        xqs.declareVariable("nuevoContenido", nuevoContenido);
+
+        xqs.query(query);
+        db.closeCollection(collection);
     }
-    public List<Comment> findCommentsByUser(EntityManager em, Long userId) {
-        
-    String jpql = "SELECT c FROM Comment c JOIN FETCH c.post WHERE c.user.id = :userId ORDER BY c.creationTime DESC";
-    return em.createQuery(jpql, Comment.class)
-             .setParameter("userId", userId)
-             .getResultList();
-}
+
+    public void removeComment(long idPost, long idComentario)
+            throws XMLDBException {
+
+        Collection collection = db.getCollection(POST_COLLECTION_PATH);
+
+
+        XQueryService xqs =
+                (XQueryService) collection.getService(
+                        "XQueryService",
+                        "1.0"
+                );
+
+        String query = """
+                xquery version "3.1";
+                
+                declare namespace p = "http://red-social.org/post";
+                
+                let $post := collection("/db/red-social/posts")/p:post[
+                    p:id = $idPost
+                ]
+                
+                return update delete
+                    $post/p:comentarios/p:comentario[
+                        p:id = $idComentario
+                    ]
+                """;
+
+        xqs.declareVariable("idPost", idPost);
+        xqs.declareVariable("idComentario", idComentario);
+
+        xqs.query(query);
+        db.closeCollection(collection);
+    }
+
+    public void removeAllCommentsFromUser(long idUsuario) throws XMLDBException {
+        Collection collection = db.getCollection(POST_COLLECTION_PATH);
+
+        XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
+
+        String query = """
+                xquery version "3.1";
+                
+                declare namespace p = "http://red-social.org/post";
+                
+                for $post in collection("/db/red-social/posts")/p:post
+                let $comentarios := $post/p:comentarios/p:comentario[p:idAutor = $idUsuario]
+                return
+                    if (exists($comentarios)) then
+                        update delete $comentarios
+                    else ()
+                """;
+
+        xqs.declareVariable("idUsuario", idUsuario);
+
+        xqs.query(query);
+        db.closeCollection(collection);
+    }
 }

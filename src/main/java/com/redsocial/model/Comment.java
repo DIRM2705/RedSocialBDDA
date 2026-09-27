@@ -1,55 +1,72 @@
 package com.redsocial.model;
 
-import javax.persistence.*;
-import java.io.Serializable;
+import com.redsocial.dao.UserDAO;
+import org.w3c.dom.Element;
 
-@Entity
-@Table(name = "comments") // Opcional: Define el nombre de la tabla en plural
-public class Comment extends Editable implements Serializable {
-    
-    private static final long serialVersionUID = 1L;
+import java.util.ArrayList;
+import java.util.List;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class Comment {
+
     private Long id;
-
-    // 1. Definimos la relación hacia el Post
-    // LAZY es crucial aquí para el rendimiento: no queremos cargar el Post completo 
-    // cada vez que consultemos un comentario.
-    @ManyToOne(fetch = FetchType.LAZY)
-    // 2. @JoinColumn le dice a JPA que cree una columna física llamada "post_id" 
-    // en la tabla "comments" para guardar la llave foránea.
-    @JoinColumn(name = "post_id", nullable = false)
-    private Post post;
+    private Long authorId;
+    private String content;
+    private List<Long> likesUserIds;
+    private List<Long> reportsUserIds;
 
  
 
     // Constructor vacío requerido por JPA
-    public Comment() {
-        super();
+    public Comment(Element commentElement)
+    {
+        this.id = Long.parseLong(commentElement.getElementsByTagName("id").item(0).getTextContent());
+        this.authorId = Long.parseLong(commentElement.getElementsByTagName("idAutor").item(0).getTextContent());
+        this.content = commentElement.getElementsByTagName("contenido").item(0).getTextContent();
+        this.likesUserIds = new ArrayList<>(); // Inicializar según sea necesario
+        this.reportsUserIds = new ArrayList<>(); // Inicializar según sea necesario
+
+        for (int i = 0; i < commentElement.getElementsByTagName("like").getLength(); i++) {
+            Long userId = Long.parseLong(commentElement.getElementsByTagName("like").item(i).getTextContent());
+            this.likesUserIds.add(userId);
+        }
+
+        for (int i = 0; i < commentElement.getElementsByTagName("report").getLength(); i++) {
+            Long userId = Long.parseLong(commentElement.getElementsByTagName("report").item(i).getTextContent());
+            this.reportsUserIds.add(userId);
+        }
     }
 
-    public Comment(String content, User author, Post post) {
-        super();
-        this.content = content; // Heredado de Editable
-        this.user = author;     // Heredado de Editable
-        this.post = post;
+    public Comment(long authorID, String contenido)
+    {
+        this.authorId = authorID;
+        this.content = contenido;
+        this.likesUserIds = new ArrayList<>();
+        this.reportsUserIds = new ArrayList<>();
     }
 
-    // Getters y Setters
+
     public Long getId() { 
         return id; 
     }
 
-    public void setId(Long id) { 
-       this.id = id; // Cambia el return por esta asignación
-   }
-
-    public Post getPost() { 
-        return post; 
+    public Long getAuthorId() {
+        return authorId;
     }
 
-    public void setPost(Post post) { 
-        this.post = post; 
+    public String getContent() {
+        return content;
+    }
+
+    public User getUser() {
+        UserDAO dao = new UserDAO();
+        return dao.findById(authorId);
+    }
+
+    public List<Long> getLikesUserIds() {
+        return likesUserIds;
+    }
+
+    public List<Long> getReportsUserIds() {
+        return reportsUserIds;
     }
 }

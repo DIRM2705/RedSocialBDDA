@@ -1,32 +1,86 @@
 package com.redsocial.model;
 
+import com.redsocial.dao.UserDAO;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import java.text.DateFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-import javax.persistence.*;
 
-@Entity
-@Inheritance(strategy = InheritanceType.JOINED)
-public class Post extends Reactionable {
-
-    @Id
-    @GeneratedValue
+public class Post {
     private long id;
-    
-    private String title;
 
-    @ElementCollection
-    private List<String> tags = new ArrayList<>();
+    private final long authorId;
+    private Date creationDate;
+    private Date lastModifiedDate;
 
-    // CORRECCIÓN CLAVE: mappedBy evita la tabla intermedia innecesaria[cite: 2]
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Comment> comment = new ArrayList<>();
+    private final List<Long> collectionIds;
+    private final List<String> mediaUrls;
+    private final String content;
+    private final List<Comment> comments;
+    private final List<String> tags;
+    private final List<Long> likesUserID;
 
-    public Post() { super(); }
+    public Post(Document xmlDocument)
+    {
+        Element root = xmlDocument.getDocumentElement();
+        this.id = Long.parseLong(root.getElementsByTagName("id").item(0).getTextContent());
+        this.authorId = Long.parseLong(root.getElementsByTagName("idAutor").item(0).getTextContent());
+        try
+        {
+            this.creationDate = DateFormat.getDateInstance().parse(root.getElementsByTagName("fechaCreacion").item(0).getTextContent());
+            this.lastModifiedDate = DateFormat.getDateInstance().parse(root.getElementsByTagName("fechaUltimaModificacion").item(0).getTextContent());
+        }
+        catch (ParseException e)
+        {
+            this.creationDate = new Date();
+            this.lastModifiedDate = new Date();
+        }
+        this.content = root.getElementsByTagName("contenido").item(0).getTextContent();
+        this.comments = new ArrayList<>();
+        this.collectionIds = new ArrayList<>();
+        this.mediaUrls = new ArrayList<>();
+        this.tags = new ArrayList<>();
+        this.likesUserID = new ArrayList<>();
 
-    public Post(String content, User author) {
-        super();
+        for (int i = 0; i < root.getElementsByTagName("idColeccion").getLength(); i++) {
+            this.collectionIds.add(Long.parseLong(root.getElementsByTagName("idColeccion").item(i).getTextContent()));
+        }
+
+        for (int i = 0; i < root.getElementsByTagName("urlMedia").getLength(); i++) {
+            this.mediaUrls.add(root.getElementsByTagName("urlMedia").item(i).getTextContent());
+        }
+
+        for (int i = 0; i < root.getElementsByTagName("tag").getLength(); i++) {
+            this.tags.add(root.getElementsByTagName("tag").item(i).getTextContent());
+        }
+
+        for (int i = 0; i < root.getElementsByTagName("like").getLength(); i++) {
+            Element likeElement = (Element) root.getElementsByTagName("like").item(i);
+            long userId = Long.parseLong(likeElement.getElementsByTagName("idUsuario").item(0).getTextContent());
+            this.likesUserID.add(userId);
+        }
+
+        for (int i = 0; i < root.getElementsByTagName("comentario").getLength(); i++) {
+            Element commentElement = (Element) root.getElementsByTagName("comentario").item(i);
+            Comment comment = new Comment(commentElement);
+            this.comments.add(comment);
+        }
+    }
+
+    public Post(long authorId, String content, List<String> mediaUrls, List<String> tags) {
+        this.authorId = authorId;
+        this.creationDate = new Date();
+        this.lastModifiedDate = new Date();
         this.content = content;
-        this.user = author;
+        this.collectionIds = new ArrayList<>();
+        this.mediaUrls = mediaUrls;
+        this.comments = new ArrayList<>();
+        this.tags = tags;
+        this.likesUserID = new ArrayList<>();
     }
 
     public void share() {
@@ -38,18 +92,51 @@ public class Post extends Reactionable {
     }
 
     public void addComment(Comment newComment) {
-        this.comment.add(newComment);
+        this.comments.add(newComment);
     }
 
     public void removeComment(Comment targetComment) {
-        this.comment.remove(targetComment);
+        this.comments.remove(targetComment);
     }
 
-    // Getters y Setters
-    public long getId() { return id; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public List<String> getTags() { return tags; }
-    public void setTags(List<String> tags) { this.tags = tags; }
-    public List<Comment> getComment() { return comment; }
+    public long getId() {
+        return id;
+    }
+
+    public long getAuthorId() {
+        return authorId;
+    }
+
+    public User getUser() {
+        UserDAO dao = new UserDAO();
+        return dao.findById(authorId);
+    }
+
+    public Date getCreationDate() {
+        return creationDate;
+    }
+
+    public Date getLastModifiedDate() {
+        return lastModifiedDate;
+    }
+
+    public List<Long> getCollectionIds() {
+        return collectionIds;
+    }
+
+    public List<String> getMediaUrls() {
+        return mediaUrls;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public List<Comment> getComments() {
+        return comments;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
 }
