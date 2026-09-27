@@ -24,6 +24,12 @@ public class UserService {
             throw new IllegalArgumentException("Formato de correo inválido. Debe contener un dominio válido (ej. usuario@dominio.com).");
         }
 
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre no puede estar vacío.");
+        }
+
+        name = name.replace(" ", "_");
+
         // 2. Validar contraseña (Mínimo 8 caracteres, 1 número, 1 mayúscula)
         if (!password.matches("^(?=.*[A-Z])(?=.*\\d).{8,}$")) {
             throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres, un número y una mayúscula.");
@@ -37,6 +43,9 @@ public class UserService {
             User existingUser = userDAO.findByEmail(em, email);
             if (existingUser != null) {
                 throw new IllegalArgumentException("El correo electrónico ya está registrado.");
+            }
+            if (userDAO.findByName(em, name) != null) {
+                throw new IllegalArgumentException("El nombre de usuario ya está en uso.");
             }
 
             User newUser = new User(name, email, password);
@@ -52,34 +61,6 @@ public class UserService {
                 em.getTransaction().rollback();
             }
             throw e; 
-        } finally {
-            em.close();
-        }
-    }
-    
-    public void followUser(long currentUserId, long targetUserId) {
-        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
-        try {
-            em.getTransaction().begin();
-
-            User currentUser = userDAO.findById(em, currentUserId);
-            User targetUser = userDAO.findById(em, targetUserId);
-
-            if (currentUser == null || targetUser == null) {
-                throw new IllegalArgumentException("Uno o ambos usuarios no existen.");
-            }
-
-            if (targetUser.getBlocked().contains(currentUser) || currentUser.getBlocked().contains(targetUser)) {
-                throw new IllegalStateException("Acción denegada debido a un bloqueo.");
-            }
-
-            targetUser.notifyFollow(currentUser);
-            em.getTransaction().commit();
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            throw e;
         } finally {
             em.close();
         }
@@ -127,5 +108,10 @@ public class UserService {
         } finally {
             em.close();
         }
+    }
+
+    public void getProfile(long userId)
+    {
+
     }
 }

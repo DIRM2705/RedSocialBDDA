@@ -42,7 +42,6 @@ public class MainPrueba {
             System.out.println("4. Ver todos los Usuarios");
             System.out.println("5. Ver todos los Posts");
             System.out.println("6. Ver un Post y sus Comentarios");
-            System.out.println("7. Salir y cerrar base de datos");
             System.out.println("7. Eliminar un Comentario");
             System.out.println("8. Eliminar un Post");
             System.out.println("9. Eliminar un Usuario");

@@ -19,7 +19,7 @@ public class PostService {
     }
 
     public void createPost(long authorId, String content) {
-        // Límite de 280 caracteres[cite: 2]
+        // Límite de 280 caracteres
         if (content == null || content.trim().isEmpty() || content.length() > 280) {
             throw new IllegalArgumentException("El contenido del post debe tener entre 1 y 280 caracteres.");
         }

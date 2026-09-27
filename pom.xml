@@ -30,6 +30,18 @@
             <artifactId>javax.persistence-api</artifactId> 
             <version>2.2</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.exist-db</groupId>
+            <artifactId>exist-core</artifactId>
+            <version>6.2.0</version> <!-- Verifica la última versión estable -->
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>java-dotenv</artifactId>
+            <version>5.2.2</version>
+        </dependency>
        
     </dependencies>
 </project>

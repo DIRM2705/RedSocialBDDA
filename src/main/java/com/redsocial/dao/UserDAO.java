@@ -31,6 +31,18 @@ public class UserDAO extends GenericDAO<User, Long> {
             return null; 
         }
     }
+
+    public User findByName(EntityManager em, String name) {
+        try {
+            String jpql = "SELECT u FROM User u WHERE u.name = :name";
+            TypedQuery<User> query = em.createQuery(jpql, User.class);
+            query.setParameter("name", name);
+            return query.getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
+    }
+
     public List<User> searchUsers(EntityManager em, String keyword) {
     // Usa LIKE para autocompletar nombres. Equivalente a un LIKE en T-SQL.
     String jpql = "SELECT u FROM User u WHERE LOWER(u.name) LIKE LOWER(:keyword)";
