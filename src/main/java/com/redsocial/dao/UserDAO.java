@@ -1,38 +1,44 @@
 package com.redsocial.dao;
 
+import com.redsocial.exception.ConflictException;
+import com.redsocial.exception.ResourceNotFoundException;
 import com.redsocial.model.User;
-import org.xmldb.api.base.XMLDBException;
+import com.redsocial.util.JPAUtil;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.TypedQuery;
 
+@Repository
 public class UserDAO extends GenericObjectDAO<User, Long> {
 
     public UserDAO() {
         super(User.class);
     }
 
-    public void createUser(User user) throws IllegalArgumentException{
+    public void createUser(User user) throws ConflictException {
         String email = user.getEmail();
         String name = user.getUsername();
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
 
         try {
             em.getTransaction().begin();
 
             User existingUser = findByEmail(email);
             if (existingUser != null) {
-                throw new IllegalArgumentException("El correo electrónico ya está registrado.");
+                throw new ConflictException("El correo electrónico ya está registrado.");
             }
 
             if (findByName(name) != null) {
-                throw new IllegalArgumentException("El nombre de usuario ya está en uso.");
+                throw new ConflictException("El nombre de usuario ya está en uso.");
             }
 
             em.persist(user);
             em.getTransaction().commit();
 
-        } catch (IllegalArgumentException e) {
+        } catch (ConflictException e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
@@ -42,17 +48,15 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
         }
     }
 
-    public void deleteUser(long userId)  throws XMLDBException, IllegalArgumentException {
+    public void deleteUser(long userId)  throws ConflictException {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
             em.getTransaction().begin();
             User user = findById(userId);
 
             if (user == null) {
-                throw new IllegalArgumentException("El usuario no existe.");
+                throw new ConflictException("El usuario no existe.");
             }
-
-            CommentDAO commentDAO = new CommentDAO();
-            commentDAO.removeAllCommentsFromUser(userId);
 
             // Integridad de seguidores/seguidos
             for (User followed : user.getFollowed_by()) {
@@ -66,7 +70,7 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
             em.remove(em.contains(user) ? user : em.merge(user));
 
             em.getTransaction().commit();
-        } catch (Exception e) {
+        } catch (ConflictException e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
@@ -76,29 +80,35 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
         }
     }
 
-    public void updateUserName(long userId, String newName) throws IllegalArgumentException {
+    public void updateUserName(long userId, String newName) throws ConflictException {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
             em.getTransaction().begin();
             User user = findById(userId);
 
             if (user == null) {
-                throw new IllegalArgumentException("El usuario no existe.");
+                throw new ConflictException("El usuario no existe.");
             }
 
             if (findByName(newName) != null) {
-                throw new IllegalArgumentException("El nombre de usuario ya está en uso.");
+                throw new ConflictException("El nombre de usuario ya está en uso.");
             }
 
             //Validar nombre (no vacío y sin espacios)
             newName = newName.replace(" ", "_");
+
+            if (newName.equals(user.getUsername())) {
+                throw new ConflictException("El nuevo nombre de usuario es igual al actual.");
+            }
+
             if (newName.trim().isEmpty()) {
-                throw new IllegalArgumentException("El nombre no puede estar vacío.");
+                throw new ConflictException("El nombre no puede estar vacío.");
             }
 
             user.setUsername(newName);
             em.merge(user);
             em.getTransaction().commit();
-        } catch (IllegalArgumentException e) {
+        } catch (ConflictException e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
@@ -108,28 +118,29 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
         }
     }
 
-    public void updateUserEmail(long userId, String newEmail) throws IllegalArgumentException {
+    public void updateUserEmail(long userId, String newEmail) throws ConflictException {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
             em.getTransaction().begin();
             User user = findById(userId);
 
             if (user == null) {
-                throw new IllegalArgumentException("El usuario no existe.");
+                throw new ConflictException("El usuario no existe.");
             }
 
             if (findByEmail(newEmail) != null) {
-                throw new IllegalArgumentException("El correo electrónico ya está registrado.");
+                throw new ConflictException("El correo electrónico ya está registrado.");
             }
 
             // Validar formato de correo electrónico
             if (!newEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$")) {
-                throw new IllegalArgumentException("Formato de correo inválido. Debe contener un dominio válido (ej. usuario.dominio.com).");
+                throw new ConflictException("Formato de correo inválido. Debe contener un dominio válido (ej. usuario.dominio.com).");
             }
 
             user.setEmail(newEmail);
             em.merge(user);
             em.getTransaction().commit();
-        } catch (IllegalArgumentException e) {
+        } catch (ConflictException e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
@@ -139,24 +150,25 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
         }
     }
 
-    public void updateUserPassword(long userId, String newPassword) throws IllegalArgumentException {
+    public void updateUserPassword(long userId, String newPassword) throws ConflictException {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
             em.getTransaction().begin();
             User user = findById(userId);
 
             if (user == null) {
-                throw new IllegalArgumentException("El usuario no existe.");
+                throw new ConflictException("El usuario no existe.");
             }
 
             // Validar contraseña (Mínimo 8 caracteres, 1 número, 1 mayúscula)
             if (!newPassword.matches("^(?=.*[A-Z])(?=.*\\d).{8,}$")) {
-                throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres, un número y una mayúscula.");
+                throw new ConflictException("La contraseña debe tener al menos 8 caracteres, un número y una mayúscula.");
             }
 
             user.setPassword(newPassword);
             em.merge(user);
             em.getTransaction().commit();
-        } catch (IllegalArgumentException e) {
+        } catch (ConflictException e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
@@ -173,7 +185,8 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
      * @param email
      * @return
      */
-    public User findByEmail(String email) {
+    public User findByEmail(String email) throws ResourceNotFoundException {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
             String jpql = "SELECT u FROM User u WHERE u.email = :email";
             TypedQuery<User> query = em.createQuery(jpql, User.class);
@@ -181,36 +194,36 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
             return query.getSingleResult();
         } catch (NoResultException e) {
             // ObjectDB lanza esta excepción si la consulta no devuelve ningún resultado
-            return null;
+            throw new ResourceNotFoundException("El usuario con el correo electrónico " + email + " no existe.");
+        }
+        finally {
+            em.close();
         }
     }
 
-    public User findByName(String name) {
+    public User findByName(String name) throws ResourceNotFoundException {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
             String jpql = "SELECT u FROM User u WHERE u.name = :name";
             TypedQuery<User> query = em.createQuery(jpql, User.class);
             query.setParameter("name", name);
             return query.getSingleResult();
         } catch (NoResultException e) {
-            return null;
+            throw new ResourceNotFoundException("El usuario con el nombre " + name + " no existe.");
+        }
+        finally {
+            em.close();
         }
     }
 
     public List<User> searchUsers(String keyword) {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         // Usa LIKE para autocompletar nombres. Equivalente a un LIKE en T-SQL.
         String jpql = "SELECT u FROM User u WHERE LOWER(u.name) LIKE LOWER(:keyword)";
-        return em.createQuery(jpql, User.class)
+        List<User> users = em.createQuery(jpql, User.class)
                 .setParameter("keyword", "%" + keyword + "%")
                 .getResultList();
+        em.close();
+        return users;
     }
-
-    public List<User> findFollowers(Long userId) {
-        // Navega por la colección followed_by usando un JOIN implícito
-        String jpql = "SELECT f FROM User u JOIN u.followed_by f WHERE u.id = :userId";
-        return em.createQuery(jpql, User.class)
-                .setParameter("userId", userId)
-                .getResultList();
-    }
-
-
 }

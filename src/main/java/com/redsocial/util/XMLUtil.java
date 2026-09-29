@@ -1,5 +1,6 @@
 package com.redsocial.util;
 
+import com.redsocial.exception.InternalServerException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -21,54 +22,64 @@ import java.io.StringWriter;
 public class XMLUtil {
 
 
-    public static String documentToString(Document document) throws TransformerException {
+    public static String documentToString(Document document) throws InternalServerException {
 
-        TransformerFactory factory =
-                TransformerFactory.newInstance();
+        try {
+            TransformerFactory factory =
+                    TransformerFactory.newInstance();
 
-        Transformer transformer =
-                factory.newTransformer();
+            Transformer transformer =
+                    factory.newTransformer();
 
-        transformer.setOutputProperty(
-                OutputKeys.INDENT,
-                "yes"
-        );
+            transformer.setOutputProperty(
+                    OutputKeys.INDENT,
+                    "yes"
+            );
 
-        transformer.setOutputProperty(
-                OutputKeys.ENCODING,
-                "UTF-8"
-        );
+            transformer.setOutputProperty(
+                    OutputKeys.ENCODING,
+                    "UTF-8"
+            );
 
-        transformer.setOutputProperty(
-                OutputKeys.OMIT_XML_DECLARATION,
-                "no"
-        );
+            transformer.setOutputProperty(
+                    OutputKeys.OMIT_XML_DECLARATION,
+                    "no"
+            );
 
-        StringWriter writer =
-                new StringWriter();
+            StringWriter writer =
+                    new StringWriter();
 
-        transformer.transform(
-                new DOMSource(document),
-                new StreamResult(writer)
-        );
+            transformer.transform(
+                    new DOMSource(document),
+                    new StreamResult(writer)
+            );
 
-        return writer.toString();
+            return writer.toString();
+        }
+        catch (TransformerException e) {
+            throw new InternalServerException("Error converting Document to String: " + e.getMessage());
+        }
     }
 
-    public static Document parseDocument(String xml) throws ParserConfigurationException, IOException, SAXException {
+    public static Document parseDocument(String xml) throws InternalServerException {
 
-        DocumentBuilderFactory factory =
-                DocumentBuilderFactory.newInstance();
+        try {
+            DocumentBuilderFactory factory =
+                    DocumentBuilderFactory.newInstance();
 
-        factory.setNamespaceAware(true);
+            factory.setNamespaceAware(true);
 
-        DocumentBuilder builder =
-                factory.newDocumentBuilder();
+            DocumentBuilder builder =
+                    factory.newDocumentBuilder();
 
-        return builder.parse(
-                new org.xml.sax.InputSource(
-                        new StringReader(xml)
-                )
-        );
+            return builder.parse(
+                    new org.xml.sax.InputSource(
+                            new StringReader(xml)
+                    )
+            );
+        }
+        catch (ParserConfigurationException | IOException | SAXException e) {
+            throw new InternalServerException("Error parsing XML Document: " + e.getMessage());
+        }
     }
 }

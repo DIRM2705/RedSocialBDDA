@@ -1,18 +1,24 @@
 package com.redsocial.db;
 
+import com.redsocial.exception.DBException;
+import com.redsocial.exception.ResourceNotFoundException;
+import io.github.cdimascio.dotenv.Dotenv;
 import org.xmldb.api.DatabaseManager;
 import org.xmldb.api.base.Collection;
-import org.xmldb.api.base.Resource;
 import org.xmldb.api.base.XMLDBException;
-import org.xmldb.api.modules.XMLResource;
 
 public class ExistDB
 {
+    private static final Dotenv ENV = Dotenv.configure()
+            .ignoreIfMissing()
+            .load();
     private static final ExistDB INSTANCE = new ExistDB();
     private static String BASE_URI;
     private static String USER;
     private static String PASSWORD;
-    private static String BASE_SCHEMA_URI;
+
+
+
     private ExistDB()
     {
         try
@@ -36,10 +42,9 @@ public class ExistDB
 
     private void validateVariables() throws IllegalStateException
     {
-        String baseUri = System.getenv("EXIST_BASE_URI");
-        String user = System.getenv("EXIST_USER");
-        String password = System.getenv("EXIST_PASSWORD");
-        String baseSchemaUri = System.getenv("EXIST_BASE_SCHEMA_URI");
+        String baseUri = ENV.get("EXIST_BASE_URI");
+        String user = ENV.get("EXIST_USER");
+        String password = ENV.get("EXIST_PASSWORD");
         if (baseUri == null || baseUri.isEmpty()) {
             throw new IllegalStateException("La variable de entorno EXIST_BASE_URI no está definida.");
         }
@@ -57,50 +62,46 @@ public class ExistDB
         }
 
         PASSWORD = password;
-
-        if (baseSchemaUri == null || baseSchemaUri.isEmpty()) {
-            throw new IllegalStateException("La variable de entorno EXIST_COLLECTION_PATH no está definida.");
-        }
-
-        BASE_SCHEMA_URI = baseSchemaUri;
     }
 
-    public Collection getCollection(String collection_path) throws IllegalStateException, XMLDBException {
+    public Collection getCollection(String collection_path) throws DBException, ResourceNotFoundException {
 
         if(collection_path == null || collection_path.isEmpty()) {
-            throw new IllegalArgumentException("El path de la colección no puede ser nulo o vacío.");
+            throw new ResourceNotFoundException("El path de la colección no puede ser nulo o vacío.");
         }
 
-        Collection collection =
-                DatabaseManager.getCollection(
-                        BASE_URI + collection_path,
-                        USER,
-                        PASSWORD
-                );
+        try {
+            Collection collection =
+                    DatabaseManager.getCollection(
+                            BASE_URI + collection_path,
+                            USER,
+                            PASSWORD
+                    );
 
-        if (collection == null) {
+            if (collection == null) {
 
-            throw new XMLDBException(XMLDBException.INVALID_COLLECTION, "No se pudo acceder a: " + collection_path);
+                throw new ResourceNotFoundException("No se pudo acceder a la colección: " + collection_path);
+            }
+
+            return collection;
         }
-
-        return collection;
+        catch (XMLDBException e) {
+            throw new DBException("Error al acceder a la colección: " + e.getMessage());
+        }
     }
 
-    public void closeCollection(Collection collection) throws XMLDBException {
+    public void closeCollection(Collection collection) throws DBException {
 
         if (collection != null) {
-            collection.close();
+
+            try
+            {
+                collection.close();
+            }
+            catch (XMLDBException e)
+            {
+                throw new DBException("Error al cerrar la colección: " + e.getMessage());
+            }
         }
-    }
-
-    public XMLResource getResource(Collection collection, String resourceName) throws IllegalStateException, XMLDBException {
-        Resource resource = collection.getResource(resourceName);
-
-        if (resource == null) {
-
-            throw new IllegalStateException("El recurso no existe: " + resourceName);
-        }
-
-        return (XMLResource) resource;
     }
 }
