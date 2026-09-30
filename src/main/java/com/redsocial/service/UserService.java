@@ -41,8 +41,8 @@ public class UserService {
     public void deleteUser(long userId) throws DBException, ConflictException {
         userDAO.deleteUser(userId);
         userProfileDAO.deleteUserProfile(userId);
-        commentDAO.removeAllCommentsFromUser(userId);
         postDAO.removeAllPostsFromUser(userId);
+        //commentDAO.removeAllCommentsFromUser(userId);
     }
 
     public String getProfile(long userId) throws ResourceNotFoundException, DBException {

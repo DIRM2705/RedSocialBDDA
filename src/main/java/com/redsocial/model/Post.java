@@ -20,8 +20,8 @@ public class Post {
     private long id;
 
     private final long authorId;
-    private String creationDate;
-    private String lastModifiedDate;
+    private final String creationDate;
+    private final String lastModifiedDate;
 
     private final List<Long> collectionIds;
     private final List<String> mediaUrls;
@@ -104,11 +104,11 @@ public class Post {
         rootElement.appendChild(authorIdElement);
 
         Element creationDateElement = doc.createElement("fechaCreacion");
-        creationDateElement.appendChild(doc.createTextNode(DateFormat.getDateInstance().format(creationDate)));
+        creationDateElement.appendChild(doc.createTextNode(creationDate));
         rootElement.appendChild(creationDateElement);
 
         Element lastModifiedDateElement = doc.createElement("fechaModificacion");
-        lastModifiedDateElement.appendChild(doc.createTextNode(DateFormat.getDateInstance().format(lastModifiedDate)));
+        lastModifiedDateElement.appendChild(doc.createTextNode(lastModifiedDate));
         rootElement.appendChild(lastModifiedDateElement);
 
         Element contentElement = doc.createElement("contenido");

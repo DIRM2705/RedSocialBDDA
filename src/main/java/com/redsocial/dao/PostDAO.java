@@ -502,15 +502,23 @@ public class PostDAO extends GenericExistDAO {
                     xquery version "3.1";
                     
                     declare namespace p = "http://red-social.org/post";
+                    declare variable $idAutor as xs:string external;
                     
                     for $post in collection("/db/red-social/posts")/p:post
                     where $post/p:idAutor = $idAutor
-                    return update delete $post
+                    return $post/p:id/text()
                     """;
 
             xqs.declareVariable("idAutor", String.valueOf(userId));
 
-            xqs.query(query);
+            ResourceSet result = xqs.query(query);
+            for (ResourceIterator iterator = result.getIterator(); iterator.hasMoreResources(); ) {
+                Resource res = iterator.nextResource();
+                String postIdStr = (String) res.getContent();
+                long postId = Long.parseLong(postIdStr);
+
+                deleteById(collection, getResourceName("post", postId));
+            }
         }
         catch (XMLDBException e) {
             throw new DBException("Error al acceder a la base de datos: " + e.getMessage());
