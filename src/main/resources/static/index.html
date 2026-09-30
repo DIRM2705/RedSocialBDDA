@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Social BDDA</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- SECCIÓN DE AUTENTICACIÓN -->
+    <div id="auth-section" class="container active">
+        <h1>Bienvenido a Red Social BDDA</h1>
+        
+        <div class="auth-forms">
+            <!-- Formulario de Login -->
+            <form id="login-form" class="card">
+                <h2>Iniciar Sesión</h2>
+                <input type="text" id="login-username" placeholder="Nombre de usuario" required>
+                <input type="password" id="login-password" placeholder="Contraseña" required>
+                <!-- Campo para simular sesión por falta de retorno de ID en backend -->
+                <input type="number" id="login-userid" placeholder="ID de tu Usuario (Simulado)" required>
+                <button type="submit">Entrar</button>
+                <p id="login-message" class="message"></p>
+            </form>
+
+            <!-- Formulario de Registro -->
+            <form id="register-form" class="card">
+                <h2>Registrarse</h2>
+                <input type="text" id="reg-username" placeholder="Nombre de usuario" required>
+                <input type="email" id="reg-email" placeholder="Correo electrónico" required>
+                <input type="password" id="reg-password" placeholder="Contraseña" required>
+                <button type="submit">Crear Cuenta</button>
+                <p id="reg-message" class="message"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- SECCIÓN PRINCIPAL (FEED) -->
+    <div id="app-section" class="container">
+        <header>
+            <h1>Mi Feed - Red Social</h1>
+            <button id="logout-btn">Cerrar Sesión</button>
+        </header>
+
+        <main>
+            <!-- Crear Post -->
+            <div class="create-post card">
+                <h3>Crear nueva publicación</h3>
+                <form id="post-form">
+                    <textarea id="post-content" placeholder="¿Qué estás pensando? (Máx. 280 caracteres)" maxlength="280" required></textarea>
+                    <input type="text" id="post-hashtags" placeholder="Hashtags (separados por coma)">
+                    <button type="submit">Publicar</button>
+                </form>
+            </div>
+
+            <!-- Contenedor de Posts -->
+            <div id="feed-container">
+                <!-- Los posts se inyectarán aquí mediante JS -->
+                <p class="loading">Cargando publicaciones...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
