@@ -17,6 +17,7 @@ import org.w3c.dom.Element;
 import org.xmldb.api.base.*;
 import org.xmldb.api.modules.XQueryService;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,7 +25,7 @@ import java.util.List;
 @Repository
 public class PostDAO extends GenericExistDAO {
     @Value("${EXIST_POST_PATH}")
-    protected static String POST_COLLECTION_PATH;
+    private String POST_COLLECTION_PATH;
 
     public PostDAO(ExistDB db) {
         super(db);
@@ -82,11 +83,11 @@ public class PostDAO extends GenericExistDAO {
         root.appendChild(authorIdElement);
 
         Element creationDateElement = doc.createElement("fechaCreacion");
-        creationDateElement.setTextContent(post.getCreationDate().toString());
+        creationDateElement.setTextContent(post.getCreationDate());
         root.appendChild(creationDateElement);
 
-        Element lastModifiedDateElement = doc.createElement("fechaUltimaModificacion");
-        lastModifiedDateElement.setTextContent(post.getLastModifiedDate().toString());
+        Element lastModifiedDateElement = doc.createElement("fechaModificacion");
+        lastModifiedDateElement.setTextContent(post.getLastModifiedDate());
         root.appendChild(lastModifiedDateElement);
 
         Element collectionsElement = doc.createElement("colecciones");
@@ -105,9 +106,9 @@ public class PostDAO extends GenericExistDAO {
             throw new ConflictException("El post debe tener al menos contenido o mediaUrls.");
         }
 
-        Element mediaUrlsElement = doc.createElement("mediaUrls");
+        Element mediaUrlsElement = doc.createElement("multimedia");
         for (String mediaUrl : post.getMediaUrls()) {
-            Element mediaUrlElement = doc.createElement("mediaUrl");
+            Element mediaUrlElement = doc.createElement("uri");
             mediaUrlElement.setTextContent(mediaUrl);
             mediaUrlsElement.appendChild(mediaUrlElement);
         }
@@ -482,6 +483,34 @@ public class PostDAO extends GenericExistDAO {
             }
 
             return posts;
+        }
+        catch (XMLDBException e) {
+            throw new DBException("Error al acceder a la base de datos: " + e.getMessage());
+        } finally {
+            db.closeCollection(collection);
+        }
+    }
+
+    public void removeAllPostsFromUser(long userId) throws DBException {
+        Collection collection = null;
+
+        try {
+            collection = db.getCollection(POST_COLLECTION_PATH);
+
+            XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
+            String query = """
+                    xquery version "3.1";
+                    
+                    declare namespace p = "http://red-social.org/post";
+                    
+                    for $post in collection("/db/red-social/posts")/p:post
+                    where $post/p:idAutor = $idAutor
+                    return update delete $post
+                    """;
+
+            xqs.declareVariable("idAutor", String.valueOf(userId));
+
+            xqs.query(query);
         }
         catch (XMLDBException e) {
             throw new DBException("Error al acceder a la base de datos: " + e.getMessage());

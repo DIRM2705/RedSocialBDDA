@@ -1,6 +1,7 @@
 package com.redsocial.service;
 
 import com.redsocial.dao.CommentDAO;
+import com.redsocial.dao.PostDAO;
 import com.redsocial.dao.UserDAO;
 import com.redsocial.dao.UserProfileDAO;
 import com.redsocial.exception.ConflictException;
@@ -11,18 +12,19 @@ import com.redsocial.util.XMLUtil;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.xmldb.api.base.XMLDBException;
 
 @Service
 public class UserService {
     private final UserDAO userDAO;
     private final UserProfileDAO userProfileDAO;
     private final CommentDAO commentDAO;
+    private final PostDAO postDAO;
 
-    public UserService(UserDAO userDAO, UserProfileDAO userProfileDAO, CommentDAO commentDAO) {
+    public UserService(UserDAO userDAO, UserProfileDAO userProfileDAO, CommentDAO commentDAO, PostDAO postDAO) {
         this.userDAO = userDAO;
         this.userProfileDAO = userProfileDAO;
         this.commentDAO = commentDAO;
+        this.postDAO = postDAO;
     }
 
     public boolean authenticateUser(String username, String password) {
@@ -38,8 +40,9 @@ public class UserService {
 
     public void deleteUser(long userId) throws DBException, ConflictException {
         userDAO.deleteUser(userId);
+        userProfileDAO.deleteUserProfile(userId);
         commentDAO.removeAllCommentsFromUser(userId);
-
+        postDAO.removeAllPostsFromUser(userId);
     }
 
     public String getProfile(long userId) throws ResourceNotFoundException, DBException {

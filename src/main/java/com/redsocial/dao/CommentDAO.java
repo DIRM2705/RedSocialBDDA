@@ -7,14 +7,17 @@ package com.redsocial.dao;
 import com.redsocial.db.ExistDB;
 import com.redsocial.exception.DBException;
 import com.redsocial.model.Comment;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.xmldb.api.base.Collection;
 import org.xmldb.api.base.XMLDBException;
 import org.xmldb.api.modules.XQueryService;
 
 @Repository
-public class CommentDAO extends PostDAO
+public class CommentDAO extends GenericExistDAO
 {
+    @Value("${EXIST_POST_PATH}")
+    private String POST_COLLECTION_PATH;
     public CommentDAO(ExistDB db) {
         super(db);
     }

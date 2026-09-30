@@ -10,6 +10,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -18,8 +20,8 @@ public class Post {
     private long id;
 
     private final long authorId;
-    private Date creationDate;
-    private Date lastModifiedDate;
+    private String creationDate;
+    private String lastModifiedDate;
 
     private final List<Long> collectionIds;
     private final List<String> mediaUrls;
@@ -28,21 +30,13 @@ public class Post {
     private final List<String> tags;
     private final List<Long> likesUserID;
 
-    public Post(Document xmlDocument)
-    {
+    public Post(Document xmlDocument) {
         Element root = xmlDocument.getDocumentElement();
         this.id = Long.parseLong(root.getElementsByTagName("id").item(0).getTextContent());
         this.authorId = Long.parseLong(root.getElementsByTagName("idAutor").item(0).getTextContent());
-        try
-        {
-            this.creationDate = DateFormat.getDateInstance().parse(root.getElementsByTagName("fechaCreacion").item(0).getTextContent());
-            this.lastModifiedDate = DateFormat.getDateInstance().parse(root.getElementsByTagName("fechaUltimaModificacion").item(0).getTextContent());
-        }
-        catch (ParseException e)
-        {
-            this.creationDate = new Date();
-            this.lastModifiedDate = new Date();
-        }
+        this.creationDate = root.getElementsByTagName("fechaCreacion").item(0).getTextContent();
+        this.lastModifiedDate = root.getElementsByTagName("fechaModificacion").item(0).getTextContent();
+
         this.content = root.getElementsByTagName("contenido").item(0).getTextContent();
         this.comments = new ArrayList<>();
         this.collectionIds = new ArrayList<>();
@@ -54,8 +48,8 @@ public class Post {
             this.collectionIds.add(Long.parseLong(root.getElementsByTagName("idColeccion").item(i).getTextContent()));
         }
 
-        for (int i = 0; i < root.getElementsByTagName("urlMedia").getLength(); i++) {
-            this.mediaUrls.add(root.getElementsByTagName("urlMedia").item(i).getTextContent());
+        for (int i = 0; i < root.getElementsByTagName("multimedia").getLength(); i++) {
+            this.mediaUrls.add(root.getElementsByTagName("uri").item(i).getTextContent());
         }
 
         for (int i = 0; i < root.getElementsByTagName("tag").getLength(); i++) {
@@ -78,8 +72,8 @@ public class Post {
     public Post(long id, long authorId, String content, List<String> mediaUrls, List<String> tags) {
         this.id = id;
         this.authorId = authorId;
-        this.creationDate = new Date();
-        this.lastModifiedDate = new Date();
+        this.creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        this.lastModifiedDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         this.content = content;
         this.collectionIds = new ArrayList<>();
         this.mediaUrls = mediaUrls;
@@ -94,8 +88,7 @@ public class Post {
         Document doc;
         try {
             doc = factory.newDocumentBuilder().newDocument();
-        }
-        catch (ParserConfigurationException e) {
+        } catch (ParserConfigurationException e) {
             throw new InternalServerException("Error al crear el documento XML: " + e.getMessage());
         }
 
@@ -114,7 +107,7 @@ public class Post {
         creationDateElement.appendChild(doc.createTextNode(DateFormat.getDateInstance().format(creationDate)));
         rootElement.appendChild(creationDateElement);
 
-        Element lastModifiedDateElement = doc.createElement("fechaUltimaModificacion");
+        Element lastModifiedDateElement = doc.createElement("fechaModificacion");
         lastModifiedDateElement.appendChild(doc.createTextNode(DateFormat.getDateInstance().format(lastModifiedDate)));
         rootElement.appendChild(lastModifiedDateElement);
 
@@ -122,30 +115,40 @@ public class Post {
         contentElement.appendChild(doc.createTextNode(content));
         rootElement.appendChild(contentElement);
 
+        Element collectionsElement = doc.createElement("colecciones");
+        rootElement.appendChild(collectionsElement);
         for (Long collectionId : collectionIds) {
             Element collectionIdElement = doc.createElement("idColeccion");
             collectionIdElement.appendChild(doc.createTextNode(String.valueOf(collectionId)));
-            rootElement.appendChild(collectionIdElement);
+            collectionsElement.appendChild(collectionIdElement);
         }
 
+        Element mediaUrlsElement = doc.createElement("multimedia");
+        rootElement.appendChild(mediaUrlsElement);
         for (String mediaUrl : mediaUrls) {
-            Element mediaUrlElement = doc.createElement("urlMedia");
+            Element mediaUrlElement = doc.createElement("uri");
             mediaUrlElement.appendChild(doc.createTextNode(mediaUrl));
-            rootElement.appendChild(mediaUrlElement);
+            mediaUrlsElement.appendChild(mediaUrlElement);
         }
 
+        Element tagsElement = doc.createElement("tags");
+        rootElement.appendChild(tagsElement);
         for (String tag : tags) {
             Element tagElement = doc.createElement("tag");
             tagElement.appendChild(doc.createTextNode(tag));
-            rootElement.appendChild(tagElement);
+            tagsElement.appendChild(tagElement);
         }
 
+        Element likesElement = doc.createElement("likes");
+        rootElement.appendChild(likesElement);
         for (Long userId : likesUserID) {
-            Element likeUserId = doc.createElement("like");
+            Element likeUserId = doc.createElement("idUsuario");
             likeUserId.appendChild(doc.createTextNode(String.valueOf(userId)));
-            rootElement.appendChild(likeUserId);
+            likesElement.appendChild(likeUserId);
         }
 
+        Element commentsElement = doc.createElement("comentarios");
+        rootElement.appendChild(commentsElement);
         for (Comment comment : comments) {
             comment.toXML(doc, rootElement);
         }
@@ -182,11 +185,11 @@ public class Post {
         return dao.findById(authorId);
     }
 
-    public Date getCreationDate() {
+    public String getCreationDate() {
         return creationDate;
     }
 
-    public Date getLastModifiedDate() {
+    public String getLastModifiedDate() {
         return lastModifiedDate;
     }
 

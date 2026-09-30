@@ -105,42 +105,11 @@ public class UserProfileDAO extends GenericExistDAO {
         }
     }
 
-    public void deleteUserProfile(long id) throws DBException {
-        Collection collection = null;
+    public void deleteUserProfile(long id) throws ResourceNotFoundException, DBException {
+        Collection collection = db.getCollection(USER_PROFILE_PATH);
+        String resourceName = getResourceName("perfilUsuario", id);
 
-        try {
-            collection = db.getCollection(USER_PROFILE_PATH);
-            XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
-
-            String query = """
-                    xquery version "3.1";
-                    
-                    declare namespace pu =
-                        "http://red-social.org/perfilUsuario";
-                    
-                    let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
-                        /pu:perfilUsuario[
-                            pu:id = $id
-                        ]
-                    
-                    return
-                        if (exists($perfil)) then
-                            update delete $perfil
-                        else
-                            ()
-                    """;
-
-            xqs.declareVariable("id", id);
-
-            xqs.query(query);
-        }
-        catch (XMLDBException e) {
-            throw new DBException("Error al eliminar el perfil de usuario con ID " + id + ": " + e.getMessage());
-        }
-        finally {
-            db.closeCollection(collection);
-        }
+        deleteById(collection, resourceName);
     }
 
     public void changeProfilePicture(long id, String newProfilePictureURI) throws DBException {
