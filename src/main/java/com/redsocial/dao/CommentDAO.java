@@ -4,6 +4,7 @@
  */
 package com.redsocial.dao;
 
+import com.redsocial.db.ExistDB;
 import com.redsocial.exception.DBException;
 import com.redsocial.model.Comment;
 import org.springframework.stereotype.Repository;
@@ -14,6 +15,9 @@ import org.xmldb.api.modules.XQueryService;
 @Repository
 public class CommentDAO extends PostDAO
 {
+    public CommentDAO(ExistDB db) {
+        super(db);
+    }
     public void createComment(long idPost, Comment comment) throws DBException {
 
         Collection collection = null;

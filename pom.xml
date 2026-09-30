@@ -10,8 +10,8 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.buap.pcyp</groupId>
-    <artifactId>RedSocial</artifactId>
+    <groupId>com.redsocial</groupId>
+    <artifactId>redsocial</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -19,10 +19,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Java 25 aún no es estable. Usamos 21 (LTS) -->
         <maven.compiler.release>21</maven.compiler.release>
-        <exec.mainClass>com.buap.pcyp.redsocial.RedSocial</exec.mainClass>
+        <exec.mainClass>com.redsocial.RedSocialApplication</exec.mainClass>
     </properties>
 
     <repositories>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
         <repository>
             <id>objectdb</id>
             <name>ObjectDB Repository</name>
@@ -77,10 +82,12 @@
         </dependency>
 
         <!-- Carga de variables de entorno -->
+        <!-- Agregar dependencia compatible con Spring Boot 4 -->
         <dependency>
-            <groupId>io.github.cdimascio</groupId>
-            <artifactId>java-dotenv</artifactId>
-            <version>5.2.2</version>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>springboot4-dotenv</artifactId>
+            <version>5.0.1</version> <!-- Usar una versión válida, como 5.0.1 -->
+            <optional>true</optional>
         </dependency>
 
         <!-- Spring Boot: API REST y validación -->
@@ -92,6 +99,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

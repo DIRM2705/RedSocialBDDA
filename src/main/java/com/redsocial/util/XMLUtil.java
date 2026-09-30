@@ -11,7 +11,6 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import io.github.cdimascio.dotenv.Dotenv;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
@@ -20,8 +19,6 @@ import java.io.StringWriter;
 
 
 public class XMLUtil {
-
-
     public static String documentToString(Document document) throws InternalServerException {
 
         try {

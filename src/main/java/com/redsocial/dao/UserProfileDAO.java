@@ -1,18 +1,29 @@
 package com.redsocial.dao;
 
+import com.redsocial.db.ExistDB;
 import com.redsocial.exception.DBException;
 import com.redsocial.exception.ResourceNotFoundException;
 import com.redsocial.model.User;
 
+import com.redsocial.util.XMLUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.xmldb.api.base.*;
 import org.xmldb.api.modules.XQueryService;
 
 @Repository
 public class UserProfileDAO extends GenericExistDAO {
-    private static final String USER_PROFILE_PATH = ENV.get("EXIST_USER_PROFILE_PATH");
 
-    public String findUserProfileById(long id) throws ResourceNotFoundException, DBException {
+    @Value("${EXIST_USER_PROFILE_PATH}")
+    private String USER_PROFILE_PATH;
+
+    public UserProfileDAO(ExistDB db) {
+        super(db);
+    }
+
+    public Document findUserProfileById(long id) throws ResourceNotFoundException, DBException {
         Collection collection = null;
         try
         {
@@ -26,7 +37,7 @@ public class UserProfileDAO extends GenericExistDAO {
                 declare namespace pu =
                     "http://red-social.org/perfilUsuario";
                 
-                collection("/db/red-social/perfiles")
+                collection("/db/red-social/perfilesUsuarios")
                 /pu:perfilUsuario[
                     pu:id = $id
                 ]
@@ -42,7 +53,7 @@ public class UserProfileDAO extends GenericExistDAO {
 
             Resource resource = iterator.nextResource();
 
-            return resource.getContent().toString();
+            return XMLUtil.parseDocument(resource.getContent().toString());
         }
         catch (XMLDBException e)
         {
@@ -60,36 +71,32 @@ public class UserProfileDAO extends GenericExistDAO {
             collection = db.getCollection(USER_PROFILE_PATH);
             XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
 
-            String query = """
-                    xquery version "3.1";
-                    
-                    declare namespace pu =
-                        "http://red-social.org/perfilUsuario";
-                    
-                    let $perfil :=
-                        <pu:perfilUsuario>
-                            <pu:id>{$id}</pu:id>
-                            <pu:nombreUsuario>{$nombreUsuario}</pu:nombreUsuario>
-                            <pu:fotoPerfil>{$fotoPerfil}</pu:fotoPerfil>
-                            <pu:numeroSeguidores>0</pu:numeroSeguidores>
-                            <pu:numeroSeguidos>0</pu:numeroSeguidos>
-                            <pu:informacionUsuario>{$informacionUsuario}</pu:informacionUsuario>
-                            <pu:usuariosBloqueados></pu:usuariosBloqueados>
-                        </pu:perfilUsuario>
-                    
-                    return xmldb:store(
-                        "/db/red-social/perfiles",
-                        concat("perfil_", $id, ".xml"),
-                        $perfil
-                    )
-                    """;
+            Document doc = CreateBaseSchema("perfilUsuario");
 
-            xqs.declareVariable("id", user.getId());
-            xqs.declareVariable("nombreUsuario", user.getUsername());
-            xqs.declareVariable("fotoPerfil", profilePictureURL);
-            xqs.declareVariable("informacionUsuario", bio);
+            Element root = doc.getDocumentElement();
+            Element idElement = doc.createElement("id");
+            idElement.setTextContent(String.valueOf(user.getId()));
+            root.appendChild(idElement);
 
-            xqs.query(query);
+            Element fotoPerfilElement = doc.createElement("fotoPerfil");
+            fotoPerfilElement.setTextContent(profilePictureURL);
+            root.appendChild(fotoPerfilElement);
+
+            Element numeroSeguidoresElement = doc.createElement("numeroSeguidores");
+            numeroSeguidoresElement.setTextContent("0");
+            root.appendChild(numeroSeguidoresElement);
+
+            Element numeroSeguidosElement = doc.createElement("numeroSeguidos");
+            numeroSeguidosElement.setTextContent("0");
+            root.appendChild(numeroSeguidosElement);
+
+            Element informacionUsuarioElement = doc.createElement("informacionUsuario");
+            informacionUsuarioElement.setTextContent(bio);
+            root.appendChild(informacionUsuarioElement);
+
+            String resourceName = getResourceName("perfilUsuario", user.getId());
+            saveDocumentToCollection(doc, collection, resourceName);
+
         } catch (XMLDBException e) {
             throw new DBException("Error al crear el perfil de usuario: " + e.getMessage());
         }
@@ -112,7 +119,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -150,7 +157,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -187,7 +194,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -226,7 +233,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -265,7 +272,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -301,7 +308,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -337,7 +344,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -372,13 +379,13 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $userId
                         ]
                     
                     let $usuarioBloqueado :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $blockedUserId
                         ]
@@ -430,7 +437,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfiles")
+                        collection("/db/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $userId
                         ]

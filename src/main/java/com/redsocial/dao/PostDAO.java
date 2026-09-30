@@ -10,6 +10,7 @@ import com.redsocial.exception.DBException;
 import com.redsocial.exception.InternalServerException;
 import com.redsocial.model.Post;
 import com.redsocial.util.XMLUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -22,8 +23,43 @@ import java.util.List;
 
 @Repository
 public class PostDAO extends GenericExistDAO {
-    protected static final String POST_COLLECTION_PATH = ENV.get("EXIST_POST_PATH");
+    @Value("${EXIST_POST_PATH}")
+    protected static String POST_COLLECTION_PATH;
 
+    public PostDAO(ExistDB db) {
+        super(db);
+    }
+
+    public long getNextPostId() throws DBException, InternalServerException {
+        Collection collection = null;
+
+        try {
+            collection = db.getCollection(POST_COLLECTION_PATH);
+
+            XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
+
+            String query = """
+                    xquery version "3.1";
+                    
+                    declare namespace p = "http://red-social.org/post";
+                    
+                    let $maxId := max(
+                        for $post in collection("/db/red-social/posts")/p:post
+                        return xs:integer($post/p:id)
+                    )
+                    
+                    return if (empty($maxId)) then 1 else $maxId + 1
+                    """;
+
+            ResourceSet result = xqs.query(query);
+            Resource res = result.getIterator().nextResource();
+            return Long.parseLong(res.getContent().toString());
+        } catch (XMLDBException e) {
+            throw new DBException("Error al acceder a la base de datos: " + e.getMessage());
+        } finally {
+            db.closeCollection(collection);
+        }
+    }
 
     public void createPost(Post post) throws ConflictException, DBException, InternalServerException {
         Collection collection = db.getCollection(POST_COLLECTION_PATH);
@@ -351,7 +387,7 @@ public class PostDAO extends GenericExistDAO {
         }
     }
 
-    public void updateTags(int idPost, List<String> tags) throws DBException {
+    public void updateTags(long idPost, List<String> tags) throws DBException {
 
         Collection collection = null;
 
@@ -417,7 +453,6 @@ public class PostDAO extends GenericExistDAO {
 
     public ArrayList<Post> getPostsByCollection(long collectionId) throws DBException, InternalServerException {
         ArrayList<Post> posts = new ArrayList<>();
-        ExistDB db = ExistDB.getInstance();
         Collection collection = null;
 
         try {
@@ -435,6 +470,42 @@ public class PostDAO extends GenericExistDAO {
                     """;
 
             xqs.declareVariable("idColeccion", String.valueOf(collectionId));
+
+            ResourceSet result = xqs.query(query);
+            for (ResourceIterator iterator = result.getIterator(); iterator.hasMoreResources(); ) {
+                Resource res = iterator.nextResource();
+                String postXml = (String) res.getContent();
+                Document postDoc = XMLUtil.parseDocument(postXml);
+
+                Post post = new Post(postDoc);
+                posts.add(post);
+            }
+
+            return posts;
+        }
+        catch (XMLDBException e) {
+            throw new DBException("Error al acceder a la base de datos: " + e.getMessage());
+        } finally {
+            db.closeCollection(collection);
+        }
+    }
+
+    public ArrayList<Post> findAllPosts() throws DBException, InternalServerException {
+        ArrayList<Post> posts = new ArrayList<>();
+        Collection collection = null;
+
+        try {
+            collection = db.getCollection(POST_COLLECTION_PATH);
+
+            XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
+            String query = """
+                    xquery version "3.1";
+                    
+                    declare namespace p = "http://red-social.org/post";
+                    
+                    for $post in collection("/db/red-social/posts")/p:post
+                    return $post
+                    """;
 
             ResourceSet result = xqs.query(query);
             for (ResourceIterator iterator = result.getIterator(); iterator.hasMoreResources(); ) {

@@ -92,4 +92,18 @@ public class PostController
         return ResponseEntity.ok(Map.of("message", "Comentario eliminado"));
     }
 
+    // GET /api/posts/{postId}
+    @GetMapping("/{postId}")
+    public ResponseEntity<?> getPost(@PathVariable long postId) {
+        String postXML = postService.getPost(postId);
+        return ResponseEntity.ok(Map.of("post", postXML));
+    }
+
+    // GET /api/posts
+    @GetMapping
+    public ResponseEntity<?> getAllPosts() {
+        var postsXML = postService.getAllPosts();
+        return ResponseEntity.ok(Map.of("posts", postsXML));
+    }
+
 }

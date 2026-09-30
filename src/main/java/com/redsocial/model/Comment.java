@@ -1,8 +1,13 @@
 package com.redsocial.model;
 
 import com.redsocial.dao.UserDAO;
+import com.redsocial.exception.InternalServerException;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import javax.print.Doc;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,6 +47,33 @@ public class Comment {
         this.content = contenido;
         this.likesUserIds = new ArrayList<>();
         this.reportsUserIds = new ArrayList<>();
+    }
+
+    public void toXML(Document doc, Element rootElement) throws InternalServerException {
+
+        Element idElement = doc.createElement("id");
+        idElement.appendChild(doc.createTextNode(String.valueOf(id)));
+        rootElement.appendChild(idElement);
+
+        Element authorIdElement = doc.createElement("idAutor");
+        authorIdElement.appendChild(doc.createTextNode(String.valueOf(authorId)));
+        rootElement.appendChild(authorIdElement);
+
+        Element contentElement = doc.createElement("contenido");
+        contentElement.appendChild(doc.createTextNode(content));
+        rootElement.appendChild(contentElement);
+
+        for (Long userId : likesUserIds) {
+            Element likeUserId = doc.createElement("like");
+            likeUserId.appendChild(doc.createTextNode(String.valueOf(userId)));
+            rootElement.appendChild(likeUserId);
+        }
+
+        for (Long userId : reportsUserIds) {
+            Element reportUserId = doc.createElement("report");
+            reportUserId.appendChild(doc.createTextNode(String.valueOf(userId)));
+            rootElement.appendChild(reportUserId);
+        }
     }
 
 

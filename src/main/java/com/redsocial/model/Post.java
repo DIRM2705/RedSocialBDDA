@@ -1,9 +1,13 @@
 package com.redsocial.model;
 
 import com.redsocial.dao.UserDAO;
+import com.redsocial.exception.InternalServerException;
+import com.redsocial.util.XMLUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -71,7 +75,8 @@ public class Post {
         }
     }
 
-    public Post(long authorId, String content, List<String> mediaUrls, List<String> tags) {
+    public Post(long id, long authorId, String content, List<String> mediaUrls, List<String> tags) {
+        this.id = id;
         this.authorId = authorId;
         this.creationDate = new Date();
         this.lastModifiedDate = new Date();
@@ -81,6 +86,71 @@ public class Post {
         this.comments = new ArrayList<>();
         this.tags = tags;
         this.likesUserID = new ArrayList<>();
+    }
+
+    public String toXML() {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+
+        Document doc;
+        try {
+            doc = factory.newDocumentBuilder().newDocument();
+        }
+        catch (ParserConfigurationException e) {
+            throw new InternalServerException("Error al crear el documento XML: " + e.getMessage());
+        }
+
+        Element rootElement = doc.createElement("post");
+        doc.appendChild(rootElement);
+
+        Element idElement = doc.createElement("id");
+        idElement.appendChild(doc.createTextNode(String.valueOf(id)));
+        rootElement.appendChild(idElement);
+
+        Element authorIdElement = doc.createElement("idAutor");
+        authorIdElement.appendChild(doc.createTextNode(String.valueOf(authorId)));
+        rootElement.appendChild(authorIdElement);
+
+        Element creationDateElement = doc.createElement("fechaCreacion");
+        creationDateElement.appendChild(doc.createTextNode(DateFormat.getDateInstance().format(creationDate)));
+        rootElement.appendChild(creationDateElement);
+
+        Element lastModifiedDateElement = doc.createElement("fechaUltimaModificacion");
+        lastModifiedDateElement.appendChild(doc.createTextNode(DateFormat.getDateInstance().format(lastModifiedDate)));
+        rootElement.appendChild(lastModifiedDateElement);
+
+        Element contentElement = doc.createElement("contenido");
+        contentElement.appendChild(doc.createTextNode(content));
+        rootElement.appendChild(contentElement);
+
+        for (Long collectionId : collectionIds) {
+            Element collectionIdElement = doc.createElement("idColeccion");
+            collectionIdElement.appendChild(doc.createTextNode(String.valueOf(collectionId)));
+            rootElement.appendChild(collectionIdElement);
+        }
+
+        for (String mediaUrl : mediaUrls) {
+            Element mediaUrlElement = doc.createElement("urlMedia");
+            mediaUrlElement.appendChild(doc.createTextNode(mediaUrl));
+            rootElement.appendChild(mediaUrlElement);
+        }
+
+        for (String tag : tags) {
+            Element tagElement = doc.createElement("tag");
+            tagElement.appendChild(doc.createTextNode(tag));
+            rootElement.appendChild(tagElement);
+        }
+
+        for (Long userId : likesUserID) {
+            Element likeUserId = doc.createElement("like");
+            likeUserId.appendChild(doc.createTextNode(String.valueOf(userId)));
+            rootElement.appendChild(likeUserId);
+        }
+
+        for (Comment comment : comments) {
+            comment.toXML(doc, rootElement);
+        }
+
+        return XMLUtil.documentToString(doc);
     }
 
     public void share() {
@@ -138,5 +208,9 @@ public class Post {
 
     public List<String> getTags() {
         return tags;
+    }
+
+    public List<Long> getLikesUserID() {
+        return likesUserID;
     }
 }

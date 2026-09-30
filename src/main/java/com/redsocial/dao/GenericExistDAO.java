@@ -5,7 +5,9 @@ import com.redsocial.exception.DBException;
 import com.redsocial.exception.InternalServerException;
 import com.redsocial.exception.ResourceNotFoundException;
 import com.redsocial.util.XMLUtil;
-import io.github.cdimascio.dotenv.Dotenv;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xmldb.api.base.Collection;
@@ -16,22 +18,25 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+@Component
 public class GenericExistDAO {
-    protected static final Dotenv ENV = Dotenv.configure()
-            .ignoreIfMissing()
-            .load();
-
-    protected static final ExistDB db = ExistDB.getInstance();
-
     private static final String XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
-    private static final String BASE_SCHEMA_URI = ENV.get("EXIST_BASE_SCHEMA_URI");
-    private static final String BASE_NAMESPACE = "http://red-social.org/";
+    @Value("${EXIST_BASE_SCHEMA_URI}")
+    protected String BASE_SCHEMA_URI;
+    @Value("${EXIST_BASE_NAMESPACE}")
+    protected String BASE_NAMESPACE;
+
+    protected final ExistDB db;
+
+    protected GenericExistDAO(ExistDB db) {
+        this.db = db;
+    }
 
     protected String getResourceName(String res_type, long id) {
         return res_type + "_" + id + ".xml";
     }
 
-    protected static Document CreateBaseSchema(String xsdSchemaName) throws InternalServerException {
+    protected Document CreateBaseSchema(String xsdSchemaName) throws InternalServerException {
         try {
             String schemaUri = BASE_SCHEMA_URI + xsdSchemaName + ".xsd";
             String namespace = BASE_NAMESPACE + xsdSchemaName;
@@ -47,10 +52,7 @@ public class GenericExistDAO {
                     builder.newDocument();
 
             Element root =
-                    document.createElementNS(
-                            namespace,
-                            "coleccionPosts"
-                    );
+                    document.createElementNS(namespace, xsdSchemaName);
 
             // xmlns
             root.setAttributeNS(
@@ -104,7 +106,7 @@ public class GenericExistDAO {
 
         try
         {
-            XMLResource res = (XMLResource) collection.createResource(resourceName, "XML");
+            XMLResource res = (XMLResource) collection.createResource(resourceName, "XMLResource");
             res.setContent(xmlContent);
             collection.storeResource(res);
         } catch (XMLDBException e) {

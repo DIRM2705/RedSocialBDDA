@@ -27,7 +27,8 @@ public class PostService {
             throw new ConflictException("El contenido del post debe tener entre 1 y 280 caracteres.");
         }
 
-        Post post = new Post(authorId, content, mediaURLs, hashtags);
+        long id = postDAO.getNextPostId();
+        Post post = new Post(id, authorId, content, mediaURLs, hashtags);
         
         postDAO.createPost(post);
     }
@@ -40,6 +41,14 @@ public class PostService {
     public void likePost(long postId, long userId) throws DBException {
         postDAO.addLike(postId, userId);
 
+    }
+
+    public String getPost(long postId) throws DBException {
+        return postDAO.findPostById(postId).toXML();
+    }
+
+    public List<String> getAllPosts() throws DBException {
+        return postDAO.findAllPosts().stream().map(Post::toXML).toList();
     }
 
 

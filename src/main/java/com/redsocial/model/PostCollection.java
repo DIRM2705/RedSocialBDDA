@@ -14,15 +14,11 @@ public class PostCollection
 {
     @Id
     @GeneratedValue
-    private final long idColeccion;
+    private long idColeccion;
 
     private String nombreColeccion;
-    private final PostDAO postDAO;
-
-    public PostCollection(int idColeccion, String nombreColeccion) {
-        this.idColeccion = idColeccion;
+    public PostCollection(String nombreColeccion) {
         this.nombreColeccion = nombreColeccion;
-        this.postDAO = new PostDAO();
     }
 
     public String getName() {
@@ -31,10 +27,6 @@ public class PostCollection
 
     public long getId() {
         return idColeccion;
-    }
-
-    public ArrayList<Post> getPosts() throws XMLDBException, SAXException, IOException, ParserConfigurationException {
-        return postDAO.getPostsByCollection(idColeccion);
     }
 
     public void setName(String nombreColeccion) {

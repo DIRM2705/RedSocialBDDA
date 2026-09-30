@@ -7,7 +7,10 @@ import com.redsocial.exception.ConflictException;
 import com.redsocial.exception.DBException;
 import com.redsocial.exception.ResourceNotFoundException;
 import com.redsocial.model.User;
+import com.redsocial.util.XMLUtil;
 import org.springframework.stereotype.Service;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.xmldb.api.base.XMLDBException;
 
 @Service
@@ -45,7 +48,18 @@ public class UserService {
             throw new ResourceNotFoundException("Usuario no encontrado");
         }
 
-        return userProfileDAO.findUserProfileById(userId);
+        Document mainProfile = userProfileDAO.findUserProfileById(userId);
+        Element rootElement = mainProfile.getDocumentElement();
+
+        Element usernameElement = mainProfile.createElement("username");
+        usernameElement.setTextContent(user.getUsername());
+        rootElement.appendChild(usernameElement);
+
+        Element emailElement = mainProfile.createElement("email");
+        emailElement.setTextContent(user.getEmail());
+        rootElement.appendChild(emailElement);
+
+        return XMLUtil.documentToString(mainProfile);
     }
 
     public void updateUser(long userId, String newUsername, String newEmail, String newPassword) throws ResourceNotFoundException, DBException, ConflictException {
@@ -152,5 +166,23 @@ public class UserService {
         }
 
         userProfileDAO.unblockUser(userId, blockedUserId);
+    }
+
+    public void createCollection(long userId, String collectionName) throws ResourceNotFoundException, DBException, ConflictException {
+        User user = userDAO.findById(userId);
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+
+        userDAO.createCollection(userId, collectionName);
+    }
+
+    public void deleteCollection(long userId, long collectionId) throws ResourceNotFoundException, DBException, ConflictException {
+        User user = userDAO.findById(userId);
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuario no encontrado");
+        }
+
+        userDAO.deleteCollection(userId, collectionId);
     }
 }

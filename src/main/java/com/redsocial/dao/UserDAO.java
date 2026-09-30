@@ -1,7 +1,7 @@
 package com.redsocial.dao;
 
 import com.redsocial.exception.ConflictException;
-import com.redsocial.exception.ResourceNotFoundException;
+import com.redsocial.model.PostCollection;
 import com.redsocial.model.User;
 import com.redsocial.util.JPAUtil;
 import org.springframework.stereotype.Repository;
@@ -178,6 +178,59 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
         }
     }
 
+    public void createCollection(long userId, String collectionName) throws ConflictException {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
+        try {
+            em.getTransaction().begin();
+            User user = findById(userId);
+
+            if (user == null) {
+                throw new ConflictException("El usuario no existe.");
+            }
+
+            // Validar nombre de la colección (no vacío)
+            if (collectionName.trim().isEmpty()) {
+                throw new ConflictException("El nombre de la colección no puede estar vacío.");
+            }
+
+            // Crear y agregar la nueva colección
+            PostCollection newCollection = new PostCollection(collectionName);
+            user.addList(newCollection);
+            em.merge(user);
+            em.getTransaction().commit();
+        } catch (ConflictException e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
+
+    public void deleteCollection(long userId, long collectionID) throws ConflictException {
+        EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
+        try {
+            em.getTransaction().begin();
+            User user = findById(userId);
+
+            if (user == null) {
+                throw new ConflictException("El usuario no existe.");
+            }
+
+            user.removeList(collectionID);
+            em.merge(user);
+            em.getTransaction().commit();
+        } catch (ConflictException e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            em.close();
+        }
+    }
+
     /**
      * Busca un usuario por su correo electrónico.
      * Retorna null si no existe.
@@ -185,7 +238,7 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
      * @param email
      * @return
      */
-    public User findByEmail(String email) throws ResourceNotFoundException {
+    public User findByEmail(String email) {
         EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
             String jpql = "SELECT u FROM User u WHERE u.email = :email";
@@ -194,22 +247,22 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
             return query.getSingleResult();
         } catch (NoResultException e) {
             // ObjectDB lanza esta excepción si la consulta no devuelve ningún resultado
-            throw new ResourceNotFoundException("El usuario con el correo electrónico " + email + " no existe.");
+            return null;
         }
         finally {
             em.close();
         }
     }
 
-    public User findByName(String name) throws ResourceNotFoundException {
+    public User findByName(String name) {
         EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         try {
-            String jpql = "SELECT u FROM User u WHERE u.name = :name";
+            String jpql = "SELECT u FROM User u WHERE u.username = :name";
             TypedQuery<User> query = em.createQuery(jpql, User.class);
             query.setParameter("name", name);
             return query.getSingleResult();
         } catch (NoResultException e) {
-            throw new ResourceNotFoundException("El usuario con el nombre " + name + " no existe.");
+            return null;
         }
         finally {
             em.close();
@@ -219,7 +272,7 @@ public class UserDAO extends GenericObjectDAO<User, Long> {
     public List<User> searchUsers(String keyword) {
         EntityManager em = JPAUtil.getEntityManagerFactory().createEntityManager();
         // Usa LIKE para autocompletar nombres. Equivalente a un LIKE en T-SQL.
-        String jpql = "SELECT u FROM User u WHERE LOWER(u.name) LIKE LOWER(:keyword)";
+        String jpql = "SELECT u FROM User u WHERE LOWER(u.username) LIKE LOWER(:keyword)";
         List<User> users = em.createQuery(jpql, User.class)
                 .setParameter("keyword", "%" + keyword + "%")
                 .getResultList();

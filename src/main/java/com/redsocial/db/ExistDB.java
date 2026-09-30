@@ -2,105 +2,85 @@ package com.redsocial.db;
 
 import com.redsocial.exception.DBException;
 import com.redsocial.exception.ResourceNotFoundException;
-import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.xmldb.api.DatabaseManager;
 import org.xmldb.api.base.Collection;
+import org.xmldb.api.base.Database;
 import org.xmldb.api.base.XMLDBException;
 
-public class ExistDB
-{
-    private static final Dotenv ENV = Dotenv.configure()
-            .ignoreIfMissing()
-            .load();
-    private static final ExistDB INSTANCE = new ExistDB();
-    private static String BASE_URI;
-    private static String USER;
-    private static String PASSWORD;
+@Component
+public class ExistDB {
 
+    @Value("${EXIST_BASE_URI}")
+    private String baseUri;
 
+    @Value("${EXIST_USER}")
+    private String user;
 
-    private ExistDB()
-    {
-        try
-        {
-            validateVariables();
-            Class cl = Class.forName("org.exist.xmldb.DatabaseImpl");
-            org.xmldb.api.base.Database database = (org.xmldb.api.base.Database) cl.getDeclaredConstructor().newInstance();
-            org.xmldb.api.DatabaseManager.registerDatabase(database);
-        }
-        catch (Exception e)
-        {
-            System.out.println("Error: " + e.getMessage());
-            System.exit(-1);
-        }
+    @Value("${EXIST_PASSWORD}")
+    private String password;
+
+    @PostConstruct
+    public void init() throws Exception {
+        // 1. Validar que las variables se inyectaron
+        validateVariables();
+
+        // 2. Registrar el driver de eXist-db
+        Class<?> cl = Class.forName("org.exist.xmldb.DatabaseImpl");
+        Database database = (Database) cl.getDeclaredConstructor().newInstance();
+        DatabaseManager.registerDatabase(database);
+
+        System.out.println(">>> ExistDB inicializado con URI: " + baseUri);
     }
 
-    public static ExistDB getInstance()
-    {
-        return INSTANCE;
-    }
-
-    private void validateVariables() throws IllegalStateException
-    {
-        String baseUri = ENV.get("EXIST_BASE_URI");
-        String user = ENV.get("EXIST_USER");
-        String password = ENV.get("EXIST_PASSWORD");
+    private void validateVariables() {
         if (baseUri == null || baseUri.isEmpty()) {
-            throw new IllegalStateException("La variable de entorno EXIST_BASE_URI no está definida.");
+            throw new IllegalStateException(
+                    "La variable EXIST_BASE_URI no está definida");
         }
-
-        BASE_URI = baseUri;
-
         if (user == null || user.isEmpty()) {
-            throw new IllegalStateException("La variable de entorno EXIST_USER no está definida.");
+            throw new IllegalStateException(
+                    "La variable EXIST_USER no está definida");
         }
-
-        USER = user;
-
-        if (password == null || password.isEmpty()) {
-            throw new IllegalStateException("La variable de entorno EXIST_PASSWORD no está definida.");
+        if (password == null) {
+            throw new IllegalStateException(
+                    "La variable EXIST_PASSWORD no está definida (puede estar vacía)");
         }
-
-        PASSWORD = password;
     }
 
-    public Collection getCollection(String collection_path) throws DBException, ResourceNotFoundException {
+    public Collection getCollection(String collectionPath)
+            throws DBException, ResourceNotFoundException {
 
-        if(collection_path == null || collection_path.isEmpty()) {
-            throw new ResourceNotFoundException("El path de la colección no puede ser nulo o vacío.");
+        if (collectionPath == null || collectionPath.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "El path de la colección no puede ser nulo o vacío.");
         }
 
         try {
-            Collection collection =
-                    DatabaseManager.getCollection(
-                            BASE_URI + collection_path,
-                            USER,
-                            PASSWORD
-                    );
+            Collection collection = DatabaseManager.getCollection(
+                    baseUri + collectionPath, user, password);
 
             if (collection == null) {
-
-                throw new ResourceNotFoundException("No se pudo acceder a la colección: " + collection_path);
+                throw new ResourceNotFoundException(
+                        "No se pudo acceder a la colección: " + collectionPath);
             }
-
             return collection;
-        }
-        catch (XMLDBException e) {
-            throw new DBException("Error al acceder a la colección: " + e.getMessage());
+
+        } catch (XMLDBException e) {
+            throw new DBException(
+                    "Error al acceder a la colección: " + e.getMessage());
         }
     }
 
     public void closeCollection(Collection collection) throws DBException {
-
         if (collection != null) {
-
-            try
-            {
+            try {
                 collection.close();
-            }
-            catch (XMLDBException e)
-            {
-                throw new DBException("Error al cerrar la colección: " + e.getMessage());
+            } catch (XMLDBException e) {
+                throw new DBException(
+                        "Error al cerrar la colección: " + e.getMessage());
             }
         }
     }

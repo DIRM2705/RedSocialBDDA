@@ -32,15 +32,15 @@ public class User implements Serializable {
     @OneToMany(cascade = CascadeType.ALL)
     private List<PostCollection> custom_lists = new ArrayList<>();
 
-    public User(String name, String email, String password) throws IllegalArgumentException {
-        name = name.replace(" ", "_");
+    public User(String username, String email, String password) throws IllegalArgumentException {
+        username = username.replace(" ", "_");
 
         // 1. Validar correo electrónico (evita vacíos alrededor del punto)
         if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$")) {
             throw new IllegalArgumentException("Formato de correo inválido. Debe contener un dominio válido (ej. usuario@dominio.com).");
         }
 
-        if (name.trim().isEmpty()) {
+        if (username.trim().isEmpty()) {
             throw new IllegalArgumentException("El nombre no puede estar vacío.");
         }
 
@@ -49,7 +49,7 @@ public class User implements Serializable {
             throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres, un número y una mayúscula.");
         }
 
-        this.username = name;
+        this.username = username;
         this.email = email;
         this.password = password;
     }
@@ -58,8 +58,10 @@ public class User implements Serializable {
         this.custom_lists.add(list);
     }
 
-    public void removeList(PostCollection list) {
-        this.custom_lists.remove(list);
+    public void removeList(long listId) {
+        this.custom_lists.stream()
+                .filter(l -> l.getId() == listId)
+                .findFirst().ifPresent(list -> this.custom_lists.remove(list));
     }
 
     public boolean authenticate(String email, String password) {
