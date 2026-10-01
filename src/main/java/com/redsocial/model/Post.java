@@ -5,75 +5,96 @@ import com.redsocial.exception.InternalServerException;
 import com.redsocial.util.XMLUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.text.DateFormat;
-import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 public class Post {
     private long id;
+    private long authorId;
+    private Date creationDate;
+    private Date lastModifiedDate;
+    private List<Long> collectionIds;
+    private List<String> mediaUrls;
+    private String content;
+    private List<Comment> comments;
+    private List<String> tags;
+    private List<Long> likesUserID;
 
-    private final long authorId;
-    private final String creationDate;
-    private final String lastModifiedDate;
+    // Utilidades seguras de parseo XML
+    private String getXmlValue(Element root, String tag) {
+        if (root.getElementsByTagName(tag).getLength() > 0) return root.getElementsByTagName(tag).item(0).getTextContent();
+        if (root.getElementsByTagName("p:" + tag).getLength() > 0) return root.getElementsByTagName("p:" + tag).item(0).getTextContent();
+        return "";
+    }
 
-    private final List<Long> collectionIds;
-    private final List<String> mediaUrls;
-    private final String content;
-    private final List<Comment> comments;
-    private final List<String> tags;
-    private final List<Long> likesUserID;
+    private List<Element> getXmlElements(Element root, String tag) {
+        List<Element> elements = new ArrayList<>();
+        NodeList list = root.getElementsByTagName(tag);
+        for (int i = 0; i < list.getLength(); i++) elements.add((Element) list.item(i));
+        NodeList listP = root.getElementsByTagName("p:" + tag);
+        for (int i = 0; i < listP.getLength(); i++) elements.add((Element) listP.item(i));
+        return elements;
+    }
 
+    // Constructor desde XML a prueba de fallos
     public Post(Document xmlDocument) {
         Element root = xmlDocument.getDocumentElement();
-        this.id = Long.parseLong(root.getElementsByTagName("id").item(0).getTextContent());
-        this.authorId = Long.parseLong(root.getElementsByTagName("idAutor").item(0).getTextContent());
-        this.creationDate = root.getElementsByTagName("fechaCreacion").item(0).getTextContent();
-        this.lastModifiedDate = root.getElementsByTagName("fechaModificacion").item(0).getTextContent();
 
-        this.content = root.getElementsByTagName("contenido").item(0).getTextContent();
-        this.comments = new ArrayList<>();
+        String idStr = getXmlValue(root, "id");
+        this.id = idStr.isEmpty() ? 0 : Long.parseLong(idStr);
+
+        String authorIdStr = getXmlValue(root, "idAutor");
+        this.authorId = authorIdStr.isEmpty() ? 0 : Long.parseLong(authorIdStr);
+
+        try {
+            String cDate = getXmlValue(root, "fechaCreacion");
+            String mDate = getXmlValue(root, "fechaUltimaModificacion");
+            this.creationDate = cDate.isEmpty() ? new Date() : DateFormat.getDateInstance().parse(cDate);
+            this.lastModifiedDate = mDate.isEmpty() ? new Date() : DateFormat.getDateInstance().parse(mDate);
+        } catch (Exception e) {
+            this.creationDate = new Date();
+            this.lastModifiedDate = new Date();
+        }
+
+        this.content = getXmlValue(root, "contenido");
+
         this.collectionIds = new ArrayList<>();
         this.mediaUrls = new ArrayList<>();
         this.tags = new ArrayList<>();
         this.likesUserID = new ArrayList<>();
+        this.comments = new ArrayList<>();
 
-        for (int i = 0; i < root.getElementsByTagName("idColeccion").getLength(); i++) {
-            this.collectionIds.add(Long.parseLong(root.getElementsByTagName("idColeccion").item(i).getTextContent()));
+        for (Element el : getXmlElements(root, "idColeccion")) {
+            this.collectionIds.add(Long.parseLong(el.getTextContent()));
         }
-
-        for (int i = 0; i < root.getElementsByTagName("multimedia").getLength(); i++) {
-            this.mediaUrls.add(root.getElementsByTagName("uri").item(i).getTextContent());
+        for (Element el : getXmlElements(root, "urlMedia")) {
+            this.mediaUrls.add(el.getTextContent());
         }
-
-        for (int i = 0; i < root.getElementsByTagName("tag").getLength(); i++) {
-            this.tags.add(root.getElementsByTagName("tag").item(i).getTextContent());
+        for (Element el : getXmlElements(root, "tag")) {
+            this.tags.add(el.getTextContent());
         }
-
-        for (int i = 0; i < root.getElementsByTagName("like").getLength(); i++) {
-            Element likeElement = (Element) root.getElementsByTagName("like").item(i);
-            long userId = Long.parseLong(likeElement.getElementsByTagName("idUsuario").item(0).getTextContent());
-            this.likesUserID.add(userId);
+        for (Element el : getXmlElements(root, "idUsuario")) {
+            String likeUserIdStr = el.getTextContent();
+            if (!likeUserIdStr.isEmpty()) {
+                this.likesUserID.add(Long.parseLong(likeUserIdStr));
+            }
         }
-
-        for (int i = 0; i < root.getElementsByTagName("comentario").getLength(); i++) {
-            Element commentElement = (Element) root.getElementsByTagName("comentario").item(i);
-            Comment comment = new Comment(commentElement);
-            this.comments.add(comment);
+        for (Element el : getXmlElements(root, "comentario")) {
+            this.comments.add(new Comment(el));
         }
     }
 
     public Post(long id, long authorId, String content, List<String> mediaUrls, List<String> tags) {
         this.id = id;
         this.authorId = authorId;
-        this.creationDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        this.lastModifiedDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        this.creationDate = new Date();
+        this.lastModifiedDate = new Date();
         this.content = content;
         this.collectionIds = new ArrayList<>();
         this.mediaUrls = mediaUrls;
@@ -84,7 +105,6 @@ public class Post {
 
     public String toXML() {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-
         Document doc;
         try {
             doc = factory.newDocumentBuilder().newDocument();
@@ -103,117 +123,75 @@ public class Post {
         authorIdElement.appendChild(doc.createTextNode(String.valueOf(authorId)));
         rootElement.appendChild(authorIdElement);
 
+        Element nombreAutorElement = doc.createElement("nombreAutor");
+        User author = getUser();
+        nombreAutorElement.appendChild(doc.createTextNode(author != null ? author.getUsername() : "Desconocido"));
+        rootElement.appendChild(nombreAutorElement);
+
         Element creationDateElement = doc.createElement("fechaCreacion");
-        creationDateElement.appendChild(doc.createTextNode(creationDate));
+        creationDateElement.appendChild(doc.createTextNode(DateFormat.getDateInstance().format(creationDate != null ? creationDate : new Date())));
         rootElement.appendChild(creationDateElement);
 
-        Element lastModifiedDateElement = doc.createElement("fechaModificacion");
-        lastModifiedDateElement.appendChild(doc.createTextNode(lastModifiedDate));
+        Element lastModifiedDateElement = doc.createElement("fechaUltimaModificacion");
+        lastModifiedDateElement.appendChild(doc.createTextNode(DateFormat.getDateInstance().format(lastModifiedDate != null ? lastModifiedDate : new Date())));
         rootElement.appendChild(lastModifiedDateElement);
 
         Element contentElement = doc.createElement("contenido");
-        contentElement.appendChild(doc.createTextNode(content));
+        contentElement.appendChild(doc.createTextNode(content != null ? content : ""));
         rootElement.appendChild(contentElement);
 
-        Element collectionsElement = doc.createElement("colecciones");
-        rootElement.appendChild(collectionsElement);
         for (Long collectionId : collectionIds) {
             Element collectionIdElement = doc.createElement("idColeccion");
             collectionIdElement.appendChild(doc.createTextNode(String.valueOf(collectionId)));
-            collectionsElement.appendChild(collectionIdElement);
+            rootElement.appendChild(collectionIdElement);
         }
 
-        Element mediaUrlsElement = doc.createElement("multimedia");
-        rootElement.appendChild(mediaUrlsElement);
         for (String mediaUrl : mediaUrls) {
-            Element mediaUrlElement = doc.createElement("uri");
+            Element mediaUrlElement = doc.createElement("urlMedia");
             mediaUrlElement.appendChild(doc.createTextNode(mediaUrl));
-            mediaUrlsElement.appendChild(mediaUrlElement);
+            rootElement.appendChild(mediaUrlElement);
         }
 
-        Element tagsElement = doc.createElement("tags");
-        rootElement.appendChild(tagsElement);
         for (String tag : tags) {
             Element tagElement = doc.createElement("tag");
             tagElement.appendChild(doc.createTextNode(tag));
-            tagsElement.appendChild(tagElement);
+            rootElement.appendChild(tagElement);
         }
 
-        Element likesElement = doc.createElement("likes");
-        rootElement.appendChild(likesElement);
         for (Long userId : likesUserID) {
-            Element likeUserId = doc.createElement("idUsuario");
+            Element likeUserId = doc.createElement("like");
             likeUserId.appendChild(doc.createTextNode(String.valueOf(userId)));
-            likesElement.appendChild(likeUserId);
+            rootElement.appendChild(likeUserId);
         }
 
         Element commentsElement = doc.createElement("comentarios");
         rootElement.appendChild(commentsElement);
         for (Comment comment : comments) {
-            comment.toXML(doc, rootElement);
+            comment.toXML(doc, commentsElement);
         }
 
         return XMLUtil.documentToString(doc);
     }
 
-    public void share() {
-        // Lógica de compartición
-    }
-
-    public void report() {
-        // Lógica de reporte
-    }
-
-    public void addComment(Comment newComment) {
-        this.comments.add(newComment);
-    }
-
-    public void removeComment(Comment targetComment) {
-        this.comments.remove(targetComment);
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public long getAuthorId() {
-        return authorId;
-    }
+    public void addComment(Comment newComment) { this.comments.add(newComment); }
+    public void removeComment(Comment targetComment) { this.comments.remove(targetComment); }
+    public long getId() { return id; }
+    public long getAuthorId() { return authorId; }
+    public Date getCreationDate() { return creationDate; }
+    public Date getLastModifiedDate() { return lastModifiedDate; }
+    public List<Long> getCollectionIds() { return collectionIds; }
+    public List<String> getMediaUrls() { return mediaUrls; }
+    public String getContent() { return content; }
+    public List<Comment> getComments() { return comments; }
+    public List<String> getTags() { return tags; }
+    public List<Long> getLikesUserID() { return likesUserID; }
 
     public User getUser() {
-        UserDAO dao = new UserDAO();
-        return dao.findById(authorId);
-    }
-
-    public String getCreationDate() {
-        return creationDate;
-    }
-
-    public String getLastModifiedDate() {
-        return lastModifiedDate;
-    }
-
-    public List<Long> getCollectionIds() {
-        return collectionIds;
-    }
-
-    public List<String> getMediaUrls() {
-        return mediaUrls;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public List<Comment> getComments() {
-        return comments;
-    }
-
-    public List<String> getTags() {
-        return tags;
-    }
-
-    public List<Long> getLikesUserID() {
-        return likesUserID;
+        try {
+            UserDAO dao = new UserDAO();
+            return dao.findById(authorId);
+        } catch (Exception e) {
+            return null; // Evita que un error de DB rompa el XML
+        }
     }
 }

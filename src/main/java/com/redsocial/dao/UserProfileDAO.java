@@ -37,7 +37,7 @@ public class UserProfileDAO extends GenericExistDAO {
                 declare namespace pu =
                     "http://red-social.org/perfilUsuario";
                 
-                collection("/db/red-social/perfilesUsuarios")
+                collection("/db/apps/red-social/perfilesUsuarios")
                 /pu:perfilUsuario[
                     pu:id = $id
                 ]
@@ -126,7 +126,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -163,7 +163,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -202,7 +202,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -241,7 +241,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -277,7 +277,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -313,7 +313,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $id
                         ]
@@ -348,13 +348,13 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $userId
                         ]
                     
                     let $usuarioBloqueado :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $blockedUserId
                         ]
@@ -406,7 +406,7 @@ public class UserProfileDAO extends GenericExistDAO {
                         "http://red-social.org/perfilUsuario";
                     
                     let $perfil :=
-                        collection("/db/red-social/perfilesUsuarios")
+                        collection("/db/apps/red-social/perfilesUsuarios")
                         /pu:perfilUsuario[
                             pu:id = $userId
                         ]

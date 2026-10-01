@@ -27,9 +27,12 @@ public class UserService {
         this.postDAO = postDAO;
     }
 
-    public boolean authenticateUser(String username, String password) {
+    public User authenticateUser(String username, String password) {
         User user = userDAO.findByName(username);
-        return user != null && user.getPassword().equals(password);
+        if (user != null && user.getPassword().equals(password)) {
+            return user;
+        }
+        return null;
     }
 
     public void registerUser(String name, String email, String password, String profilePictureUrl, String bio) throws DBException, ConflictException {
@@ -42,7 +45,8 @@ public class UserService {
         userDAO.deleteUser(userId);
         userProfileDAO.deleteUserProfile(userId);
         postDAO.removeAllPostsFromUser(userId);
-        //commentDAO.removeAllCommentsFromUser(userId);
+        commentDAO.removeAllCommentsFromUser(userId);
+        postDAO.removeAllLikesFromUser(userId);
     }
 
     public String getProfile(long userId) throws ResourceNotFoundException, DBException {

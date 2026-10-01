@@ -87,11 +87,13 @@ public class PostDAO extends GenericExistDAO {
         root.appendChild(authorIdElement);
 
         Element creationDateElement = doc.createElement("fechaCreacion");
-        creationDateElement.setTextContent(post.getCreationDate());
+        // Convertimos la fecha a texto con formato seguro
+        creationDateElement.setTextContent(java.text.DateFormat.getDateInstance().format(post.getCreationDate()));
         root.appendChild(creationDateElement);
 
-        Element lastModifiedDateElement = doc.createElement("fechaModificacion");
-        lastModifiedDateElement.setTextContent(post.getLastModifiedDate());
+        Element lastModifiedDateElement = doc.createElement("fechaUltimaModificacion");
+        // Convertimos la fecha a texto con formato seguro
+        lastModifiedDateElement.setTextContent(java.text.DateFormat.getDateInstance().format(post.getLastModifiedDate()));
         root.appendChild(lastModifiedDateElement);
 
         Element collectionsElement = doc.createElement("colecciones");
@@ -143,43 +145,26 @@ public class PostDAO extends GenericExistDAO {
 
     public void addLike(long idPost, long idUsuario) throws DBException {
         Collection collection = null;
-
         try {
             collection = db.getCollection(POST_COLLECTION_PATH);
-
             XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
-
             String query = """
                     xquery version "3.1";
-                    
                     declare namespace p = "http://red-social.org/post";
+                    declare variable $collectionPath as xs:string external;
                     
-                    let $post := collection("/db/apps/red-social/posts")/p:post[
-                        p:id = $idPost
-                    ]
-                    
+                    let $post := collection($collectionPath)/p:post[p:id = $idPost]
                     return
-                    if (
-                        not(
-                            $post/p:likes/p:idUsuario
-                            = $idUsuario
-                        )
-                    ) then
-                    
-                        update insert
-                            <p:idUsuario>{$idUsuario}</p:idUsuario>
-                        into $post/p:likes
-                    
-                    else
-                        ()
+                    if (not($post/p:likes/p:idUsuario = $idUsuario)) then
+                        update insert <p:idUsuario>{$idUsuario}</p:idUsuario> into $post/p:likes
+                    else ()
                     """;
-
+            xqs.declareVariable("collectionPath", POST_COLLECTION_PATH);
             xqs.declareVariable("idPost", idPost);
             xqs.declareVariable("idUsuario", idUsuario);
-
             xqs.query(query);
-        } catch (XMLDBException e) {
-            throw new DBException("Error al acceder a la base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            throw new DBException("Error al dar like: " + e.getMessage());
         } finally {
             db.closeCollection(collection);
         }
@@ -187,33 +172,49 @@ public class PostDAO extends GenericExistDAO {
 
     public void removeLike(long idPost, long idUsuario) throws DBException {
         Collection collection = null;
-
         try {
             collection = db.getCollection(POST_COLLECTION_PATH);
-
             XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
-
             String query = """
                     xquery version "3.1";
-                    
                     declare namespace p = "http://red-social.org/post";
+                    declare variable $collectionPath as xs:string external;
                     
-                    let $post := collection("/db/apps/red-social/posts")/p:post[
-                        p:id = $idPost
-                    ]
-                    
-                    return update delete
-                        $post/p:likes/p:idUsuario[
-                            . = $idUsuario
-                        ]
+                    let $post := collection($collectionPath)/p:post[p:id = $idPost]
+                    return update delete $post/p:likes/p:idUsuario[. = $idUsuario]
                     """;
-
+            xqs.declareVariable("collectionPath", POST_COLLECTION_PATH);
             xqs.declareVariable("idPost", idPost);
             xqs.declareVariable("idUsuario", idUsuario);
-
             xqs.query(query);
-        } catch (XMLDBException e) {
-            throw new DBException("Error al acceder a la base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            throw new DBException("Error al quitar like: " + e.getMessage());
+        } finally {
+            db.closeCollection(collection);
+        }
+    }
+    
+    public void removeAllLikesFromUser(long userId) throws DBException {
+        Collection collection = null;
+        try {
+            collection = db.getCollection(POST_COLLECTION_PATH);
+            XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
+            String query = """
+                    xquery version "3.1";
+                    declare namespace p = "http://red-social.org/post";
+                    declare variable $collectionPath as xs:string external;
+                    declare variable $idUsuario as xs:string external;
+                    
+                    (: Busca todos los posts y elimina el nodo idUsuario que coincida :)
+                    for $post in collection($collectionPath)/p:post
+                    where $post/p:likes/p:idUsuario = $idUsuario
+                    return update delete $post/p:likes/p:idUsuario[. = $idUsuario]
+                    """;
+            xqs.declareVariable("collectionPath", POST_COLLECTION_PATH);
+            xqs.declareVariable("idUsuario", String.valueOf(userId));
+            xqs.query(query);
+        } catch (Exception e) {
+            throw new DBException("Error al eliminar los likes del usuario: " + e.getMessage());
         } finally {
             db.closeCollection(collection);
         }
@@ -497,34 +498,35 @@ public class PostDAO extends GenericExistDAO {
 
     public void removeAllPostsFromUser(long userId) throws DBException {
         Collection collection = null;
-
         try {
             collection = db.getCollection(POST_COLLECTION_PATH);
-
             XQueryService xqs = (XQueryService) collection.getService("XQueryService", "1.0");
             String query = """
                     xquery version "3.1";
-                    
                     declare namespace p = "http://red-social.org/post";
+                    declare variable $collectionPath as xs:string external;
                     declare variable $idAutor as xs:string external;
                     
-                    for $post in collection("/db/apps/red-social/posts")/p:post
+                    for $post in collection($collectionPath)/p:post
                     where $post/p:idAutor = $idAutor
                     return $post/p:id/text()
                     """;
-
+            xqs.declareVariable("collectionPath", POST_COLLECTION_PATH);
             xqs.declareVariable("idAutor", String.valueOf(userId));
-
-            ResourceSet result = xqs.query(query);
-            for (ResourceIterator iterator = result.getIterator(); iterator.hasMoreResources(); ) {
-                Resource res = iterator.nextResource();
+            
+            org.xmldb.api.base.ResourceSet result = xqs.query(query);
+            for (org.xmldb.api.base.ResourceIterator iterator = result.getIterator(); iterator.hasMoreResources(); ) {
+                org.xmldb.api.base.Resource res = iterator.nextResource();
                 String postIdStr = (String) res.getContent();
                 long postId = Long.parseLong(postIdStr);
-
-                deleteById(collection, getResourceName("post", postId));
+                
+                String resourceName = getResourceName("post", postId);
+                org.xmldb.api.modules.XMLResource xmlRes = (org.xmldb.api.modules.XMLResource) collection.getResource(resourceName);
+                if (xmlRes != null) {
+                    collection.removeResource(xmlRes);
+                }
             }
-        }
-        catch (XMLDBException e) {
+        } catch (Exception e) {
             throw new DBException("Error al acceder a la base de datos: " + e.getMessage());
         } finally {
             db.closeCollection(collection);

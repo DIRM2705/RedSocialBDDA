@@ -1,20 +1,23 @@
 // URL base del backend de Spring Boot configurado en el puerto 8081
 const API_BASE = '/api';
-
-// Estado global de la aplicación (Usuario logueado)
 let currentUserId = null;
 
-// Elementos del DOM
 const authSection = document.getElementById('auth-section');
 const appSection = document.getElementById('app-section');
 const feedContainer = document.getElementById('feed-container');
 
-// --- 1. LÓGICA DE AUTENTICACIÓN ---
+// Utilidad para extraer valores XML con o sin namespace (eXist-db usa p:etiqueta)
+function getXmlValue(xmlDoc, tagName) {
+    let el = xmlDoc.getElementsByTagName(tagName)[0];
+    if (!el) el = xmlDoc.getElementsByTagName(`p:${tagName}`)[0];
+    return el ? el.textContent : "";
+}
+
+// --- 1. AUTENTICACIÓN ---
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
-    const simulatedId = document.getElementById('login-userid').value;
     const msgEl = document.getElementById('login-message');
 
     try {
@@ -24,18 +27,18 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             body: JSON.stringify({ username, password })
         });
 
+        const data = await response.json();
         if (response.ok) {
-            currentUserId = parseInt(simulatedId); // Guardamos el ID simulado
+            currentUserId = data.userId; // Captura el ID devuelto por el backend
             authSection.classList.remove('active');
             appSection.classList.add('active');
-            loadPosts(); // Cargamos el feed
+            loadPosts(); 
         } else {
-            const data = await response.json();
             msgEl.textContent = data.error || data.message || "Credenciales inválidas";
             msgEl.className = "message error";
         }
     } catch (error) {
-        msgEl.textContent = "Error de red al conectar al servidor.";
+        msgEl.textContent = "Error de conexión.";
         msgEl.className = "message error";
     }
 });
@@ -55,12 +58,12 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         });
 
         if (response.ok) {
-            msgEl.textContent = "Usuario registrado exitosamente. Ahora inicia sesión.";
+            msgEl.textContent = "Registro exitoso. Inicia sesión.";
             msgEl.className = "message success";
             document.getElementById('register-form').reset();
         } else {
             const data = await response.json();
-            msgEl.textContent = data.error || "Error al registrar usuario";
+            msgEl.textContent = data.error || "Error al registrar";
             msgEl.className = "message error";
         }
     } catch (error) {
@@ -75,13 +78,11 @@ document.getElementById('logout-btn').addEventListener('click', () => {
     authSection.classList.add('active');
 });
 
-// --- 2. LÓGICA DE PUBLICACIONES (FEED) ---
+// --- 2. CREACIÓN DE POSTS ---
 document.getElementById('post-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const content = document.getElementById('post-content').value;
     const hashtagsRaw = document.getElementById('post-hashtags').value;
-    
-    // Convertir el string de hashtags en un array (ej. "#hola, #mundo" -> ["#hola", "#mundo"])
     const hashtags = hashtagsRaw ? hashtagsRaw.split(',').map(tag => tag.trim()) : [];
 
     try {
@@ -98,7 +99,7 @@ document.getElementById('post-form').addEventListener('submit', async (e) => {
 
         if (response.ok) {
             document.getElementById('post-form').reset();
-            loadPosts(); // Recargar los posts después de publicar
+            loadPosts();
         } else {
             alert("Error al crear la publicación.");
         }
@@ -107,9 +108,9 @@ document.getElementById('post-form').addEventListener('submit', async (e) => {
     }
 });
 
+// --- 3. CARGA Y RENDERIZADO DEL FEED ---
 async function loadPosts() {
     feedContainer.innerHTML = '<p class="loading">Cargando publicaciones...</p>';
-    
     try {
         const response = await fetch(`${API_BASE}/posts`);
         if (response.ok) {
@@ -119,137 +120,137 @@ async function loadPosts() {
             feedContainer.innerHTML = '<p class="error">Error al cargar el feed.</p>';
         }
     } catch (error) {
-        feedContainer.innerHTML = '<p class="error">Error de red. No se pudo conectar al backend.</p>';
-    }
-}
-
-// --- 3. PARSEO DEL XML DE eXist-db ---
-function renderPosts(postsXmlArray) {
-    feedContainer.innerHTML = '';
-
-    if (!postsXmlArray || postsXmlArray.length === 0) {
-        feedContainer.innerHTML = '<p>No hay publicaciones todavía.</p>';
-        return;
-    }
-
-    const parser = new DOMParser();
-
-    // Invertimos el array para que los más nuevos salgan arriba (opcional)
-    postsXmlArray.reverse().forEach(xmlString => {
-        // Parsear el string XML que devuelve eXist-db
-        const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-        
-        // Extraer los nodos
-        const id = xmlDoc.getElementsByTagName("id")[0]?.textContent || "Desconocido";
-        const idAutor = xmlDoc.getElementsByTagName("idAutor")[0]?.textContent || "Desconocido";
-        const contenido = xmlDoc.getElementsByTagName("contenido")[0]?.textContent || "";
-        const fecha = xmlDoc.getElementsByTagName("fechaCreacion")[0]?.textContent || "";
-        
-        // Extraer hashtags
-        const tagsNodos = xmlDoc.getElementsByTagName("tag");
-        let tagsList = [];
-        for(let i = 0; i < tagsNodos.length; i++) {
-            tagsList.push(tagsNodos[i].textContent);
-        }
-
-        // Crear la tarjeta HTML
-        const postCard = document.createElement('div');
-        postCard.className = 'card post';
-        postCard.innerHTML = `
-            <div class="post-header">
-                <span class="post-id">Autor ID: ${idAutor}</span>
-                <span>${fecha}</span>
-            </div>
-            <div class="post-content">
-                ${contenido}
-            </div>
-            <div class="post-footer">
-                ${tagsList.join(' ')}
-            </div>
-        `;
-        feedContainer.appendChild(postCard);
-    });
-}
-function getXmlValue(xmlDoc, tagName) {
-    // Busca primero sin prefijo
-    let el = xmlDoc.getElementsByTagName(tagName)[0];
-    // Si no lo encuentra, busca con el prefijo "p:" que usa eXist-db
-    if (!el) el = xmlDoc.getElementsByTagName(`p:${tagName}`)[0];
-    return el ? el.textContent : "";
-}
-
-async function loadPosts() {
-    feedContainer.innerHTML = '<p class="loading">Cargando publicaciones...</p>';
-    
-    try {
-        const response = await fetch(`${API_BASE}/posts`);
-        
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            feedContainer.innerHTML = `<p class="message error">Error del servidor (${response.status}): ${errData.error || response.statusText}</p>`;
-            return;
-        }
-
-        const data = await response.json();
-        console.log("Posts recibidos del backend:", data); // Para depurar en consola F12
-        renderPosts(data.posts);
-    } catch (error) {
-        console.error("Error de conexión:", error);
-        feedContainer.innerHTML = '<p class="message error">Error de conexión al cargar publicaciones. Revisa la consola (F12).</p>';
+        feedContainer.innerHTML = '<p class="error">Error de red.</p>';
     }
 }
 
 function renderPosts(postsXmlArray) {
     feedContainer.innerHTML = '';
-
     if (!postsXmlArray || postsXmlArray.length === 0) {
-        feedContainer.innerHTML = '<p style="text-align: center; color: #777;">No hay publicaciones todavía.</p>';
+        feedContainer.innerHTML = '<p style="text-align:center;">No hay publicaciones todavía.</p>';
         return;
     }
 
     const parser = new DOMParser();
-
-    // Copiamos y damos vuelta para mostrar los más recientes arriba
     [...postsXmlArray].reverse().forEach(xmlString => {
         const xmlDoc = parser.parseFromString(xmlString, "application/xml");
         
-        // Validar si hubo error al parsear el XML
-        const parseError = xmlDoc.getElementsByTagName("parsererror")[0];
-        if (parseError) {
-            console.error("XML inválido:", xmlString);
-            return;
-        }
-
-        const idAutor = getXmlValue(xmlDoc, "idAutor") || "Desconocido";
+        const idPost = getXmlValue(xmlDoc, "id");
+        const idAutor = getXmlValue(xmlDoc, "idAutor");
+        
+        const nombreAutor = getXmlValue(xmlDoc, "nombreAutor") || `Usuario #${idAutor}`;
         const contenido = getXmlValue(xmlDoc, "contenido");
         const fecha = getXmlValue(xmlDoc, "fechaCreacion");
         
-        // Tags
         let tagsList = [];
-        const tags = xmlDoc.querySelectorAll("tag, p\\:tag");
-        tags.forEach(t => tagsList.push(t.textContent));
+        xmlDoc.querySelectorAll("tag, p\\:tag").forEach(t => tagsList.push(t.textContent));
+
+        // --- PROCESAR LIKES ---
+        let likesArray = [];
+        xmlDoc.querySelectorAll("like, p\\:like").forEach(l => likesArray.push(l.textContent));
+        const likeCount = likesArray.length;
+        const hasLiked = likesArray.includes(String(currentUserId));
+        const heartIcon = hasLiked ? '❤' : '♡';
+
+        // --- PROCESAR COMENTARIOS ---
+        let commentsHtml = '';
+        xmlDoc.querySelectorAll("comentario, p\\:comentario").forEach(c => {
+            const cId = getXmlValue(c, "id");
+            const cAutorId = getXmlValue(c, "idAutor");
+            const cNombreAutor = getXmlValue(c, "nombreAutor") || `Usuario #${cAutorId}`;
+            const cContenido = getXmlValue(c, "contenido");
+            
+            const canDeleteComment = (currentUserId == cAutorId || currentUserId == idAutor);
+            const deleteBtnHtml = canDeleteComment ? `<button onclick="deleteComment(${idPost}, ${cId})" style="width:auto; padding:2px 8px; background:#dc3545; font-size:0.8em; color:white; border:none; border-radius:3px; cursor:pointer;">Borrar</button>` : '';
+
+            commentsHtml += `
+                <div style="background:#f4f6f8; padding:8px; margin-top:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="font-size:0.85em; color:#007bff;">${cNombreAutor}:</strong>
+                        <span style="font-size:0.9em; margin-left:5px;">${cContenido}</span>
+                    </div>
+                    ${deleteBtnHtml}
+                </div>
+            `;
+        });
 
         const postCard = document.createElement('div');
         postCard.className = 'card post';
+        
+        const deletePostBtn = (currentUserId == idAutor) ? `<button onclick="deletePost(${idPost})" style="width:auto; padding:2px 8px; background:#dc3545; margin-left:10px; color:white; border:none; border-radius:3px; cursor:pointer;">🗑️ Borrar Post</button>` : '';
+
         postCard.innerHTML = `
             <div class="post-header">
-                <span class="post-id">Autor ID: ${idAutor}</span>
-                <span>${fecha}</span>
+                <strong style="font-size:1.1em; color:#333;">${nombreAutor}</strong>
+                <span>${fecha} ${deletePostBtn}</span>
             </div>
-            <div class="post-content">
-                ${contenido}
-            </div>
+            <div class="post-content">${contenido}</div>
             <div class="post-footer">
-                ${tagsList.map(t => `<span class="tag">${t}</span>`).join(' ')}
+                ${tagsList.map(t => `<span style="color:#007bff; font-weight:bold;">${t.startsWith('#') ? t : '#'+t}</span>`).join(' ')}
+                
+                <!-- SECCIÓN DE BOTÓN DE LIKE -->
+                <div style="margin-top: 10px;">
+                    <button onclick="toggleLike(${idPost}, ${hasLiked})" style="background:none; border:none; color:inherit; font-size:1.2em; padding:0; width:auto; cursor:pointer;">
+                        ${heartIcon} <span style="font-size:0.9em; font-weight:normal;">${likeCount}</span>
+                    </button>
+                </div>
+            </div>
+            
+            <hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
+            
+            <div class="comments-section">
+                <h4 style="margin-bottom:10px; font-size:1em;">Comentarios</h4>
+                ${commentsHtml}
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <input type="text" id="comment-input-${idPost}" placeholder="Escribe un comentario..." style="margin:0; flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <button onclick="addComment(${idPost})" style="width:auto; padding:5px 15px; background-color:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">Comentar</button>
+                </div>
             </div>
         `;
         feedContainer.appendChild(postCard);
     });
 }
 
-// EJECUTAR AL CARGAR: Si la sección del feed está visible, carga los posts inmediatamente
-window.addEventListener('DOMContentLoaded', () => {
-    if (appSection.classList.contains('active')) {
-        loadPosts();
+// --- 4. FUNCIONES GLOBALES (Borrado e inserción de comentarios) ---
+window.deletePost = async function(postId) {
+    if(!confirm("¿Borrar esta publicación?")) return;
+    await fetch(`${API_BASE}/posts/${postId}`, { method: 'DELETE' });
+    loadPosts();
+};
+
+window.addComment = async function(postId) {
+    const input = document.getElementById(`comment-input-${postId}`);
+    if(!input.value.trim()) return;
+
+    await fetch(`${API_BASE}/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authorId: currentUserId, content: input.value })
+    });
+    loadPosts();
+};
+
+window.deleteComment = async function(postId, commentId) {
+    if(!confirm("¿Borrar este comentario?")) return;
+    await fetch(`${API_BASE}/posts/${postId}/comments/${commentId}`, { method: 'DELETE' });
+    loadPosts();
+};
+
+document.getElementById('delete-account-btn').addEventListener('click', async () => {
+    if(!confirm("¿Seguro que deseas borrar TU CUENTA? Se eliminarán en cascada todos tus posts y comentarios.")) return;
+    
+    const response = await fetch(`${API_BASE}/users/${currentUserId}`, { method: 'DELETE' });
+    if(response.ok) {
+        document.getElementById('logout-btn').click(); 
+        alert("Cuenta eliminada correctamente.");
+    } else {
+        alert("Error al intentar eliminar la cuenta.");
     }
 });
+
+// Función para dar/quitar Like
+window.toggleLike = async function(postId, hasLiked) {
+    const method = hasLiked ? 'DELETE' : 'POST';
+    await fetch(`${API_BASE}/posts/${postId}/likes?userId=${currentUserId}`, { method: method });
+    loadPosts(); 
+};

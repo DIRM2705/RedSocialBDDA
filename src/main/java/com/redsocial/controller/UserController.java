@@ -35,16 +35,19 @@ public class UserController
     // POST /api/users/login
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody UserRequest userRequest) {
-        boolean isAuthenticated = userService.authenticateUser(
+        com.redsocial.model.User authUser = userService.authenticateUser(
                 userRequest.getUsername(),
                 userRequest.getPassword());
-        if (isAuthenticated) {
-            return ResponseEntity.ok(Map.of("message", "Inicio de sesión exitoso"));
+
+        if (authUser != null) {
+            return ResponseEntity.ok(Map.of(
+                "message", "Inicio de sesión exitoso",
+                "userId", authUser.getId()
+            ));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Credenciales inválidas"));
         }
     }
-
     // DELETE /api/users/{userId}
     @DeleteMapping("/{userId}")
     public ResponseEntity<?> deleteUser(@PathVariable long userId) {
