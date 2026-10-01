@@ -4,28 +4,32 @@
  */
 package com.redsocial.dao;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Repository;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xmldb.api.base.Collection;
+import org.xmldb.api.base.Resource;
+import org.xmldb.api.base.ResourceIterator;
+import org.xmldb.api.base.ResourceSet;
+import org.xmldb.api.base.XMLDBException;
+import org.xmldb.api.modules.XQueryService;
+
 import com.redsocial.db.ExistDB;
 import com.redsocial.exception.ConflictException;
 import com.redsocial.exception.DBException;
 import com.redsocial.exception.InternalServerException;
 import com.redsocial.model.Post;
 import com.redsocial.util.XMLUtil;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Repository;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.xmldb.api.base.*;
-import org.xmldb.api.modules.XQueryService;
-
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 
 
 @Repository
 public class PostDAO extends GenericExistDAO {
     @Value("${EXIST_POST_PATH}")
-    private String POST_COLLECTION_PATH;
+    private String POST_COLLECTION_PATH; 
 
     public PostDAO(ExistDB db) {
         super(db);
@@ -45,7 +49,7 @@ public class PostDAO extends GenericExistDAO {
                     declare namespace p = "http://red-social.org/post";
                     
                     let $maxId := max(
-                        for $post in collection("/db/red-social/posts")/p:post
+                        for $post in collection("/db/apps/red-social/posts")/p:post
                         return xs:integer($post/p:id)
                     )
                     
@@ -150,7 +154,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    let $post := collection("/db/red-social/posts")/p:post[
+                    let $post := collection("/db/apps/red-social/posts")/p:post[
                         p:id = $idPost
                     ]
                     
@@ -194,7 +198,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    let $post := collection("/db/red-social/posts")/p:post[
+                    let $post := collection("/db/apps/red-social/posts")/p:post[
                         p:id = $idPost
                     ]
                     
@@ -228,7 +232,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    collection("/db/red-social/posts")/p:post[
+                    collection("/db/apps/red-social/posts")/p:post[
                         p:id = $id
                     ]
                     """;
@@ -271,7 +275,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    let $post := collection("/db/red-social/posts")/p:post[
+                    let $post := collection("/db/apps/red-social/posts")/p:post[
                         p:id = $idPost
                     ]
                     
@@ -322,7 +326,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    let $post := collection("/db/red-social/posts")/p:post[
+                    let $post := collection("/db/apps/red-social/posts")/p:post[
                         p:id = $idPost
                     ]
                     
@@ -367,7 +371,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    let $post := collection("/db/red-social/posts")/p:post[
+                    let $post := collection("/db/apps/red-social/posts")/p:post[
                         p:id = $idPost
                     ]
                     
@@ -407,7 +411,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    let $post := collection("/db/red-social/posts")/p:post[
+                    let $post := collection("/db/apps/red-social/posts")/p:post[
                         p:id = $idPost
                     ]
                     
@@ -465,7 +469,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    for $post in collection("/db/red-social/posts")/p:post
+                    for $post in collection("/db/apps/red-social/posts")/p:post
                     where $post/p:colecciones/p:idColeccion = $idColeccion
                     return $post
                     """;
@@ -504,7 +508,7 @@ public class PostDAO extends GenericExistDAO {
                     declare namespace p = "http://red-social.org/post";
                     declare variable $idAutor as xs:string external;
                     
-                    for $post in collection("/db/red-social/posts")/p:post
+                    for $post in collection("/db/apps/red-social/posts")/p:post
                     where $post/p:idAutor = $idAutor
                     return $post/p:id/text()
                     """;
@@ -540,7 +544,7 @@ public class PostDAO extends GenericExistDAO {
                     
                     declare namespace p = "http://red-social.org/post";
                     
-                    for $post in collection("/db/red-social/posts")/p:post
+                    for $post in collection("/db/apps/red-social/posts")/p:post
                     return $post
                     """;
 
