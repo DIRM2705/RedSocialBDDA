@@ -170,3 +170,86 @@ function renderPosts(postsXmlArray) {
         feedContainer.appendChild(postCard);
     });
 }
+function getXmlValue(xmlDoc, tagName) {
+    // Busca primero sin prefijo
+    let el = xmlDoc.getElementsByTagName(tagName)[0];
+    // Si no lo encuentra, busca con el prefijo "p:" que usa eXist-db
+    if (!el) el = xmlDoc.getElementsByTagName(`p:${tagName}`)[0];
+    return el ? el.textContent : "";
+}
+
+async function loadPosts() {
+    feedContainer.innerHTML = '<p class="loading">Cargando publicaciones...</p>';
+    
+    try {
+        const response = await fetch(`${API_BASE}/posts`);
+        
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            feedContainer.innerHTML = `<p class="message error">Error del servidor (${response.status}): ${errData.error || response.statusText}</p>`;
+            return;
+        }
+
+        const data = await response.json();
+        console.log("Posts recibidos del backend:", data); // Para depurar en consola F12
+        renderPosts(data.posts);
+    } catch (error) {
+        console.error("Error de conexión:", error);
+        feedContainer.innerHTML = '<p class="message error">Error de conexión al cargar publicaciones. Revisa la consola (F12).</p>';
+    }
+}
+
+function renderPosts(postsXmlArray) {
+    feedContainer.innerHTML = '';
+
+    if (!postsXmlArray || postsXmlArray.length === 0) {
+        feedContainer.innerHTML = '<p style="text-align: center; color: #777;">No hay publicaciones todavía.</p>';
+        return;
+    }
+
+    const parser = new DOMParser();
+
+    // Copiamos y damos vuelta para mostrar los más recientes arriba
+    [...postsXmlArray].reverse().forEach(xmlString => {
+        const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+        
+        // Validar si hubo error al parsear el XML
+        const parseError = xmlDoc.getElementsByTagName("parsererror")[0];
+        if (parseError) {
+            console.error("XML inválido:", xmlString);
+            return;
+        }
+
+        const idAutor = getXmlValue(xmlDoc, "idAutor") || "Desconocido";
+        const contenido = getXmlValue(xmlDoc, "contenido");
+        const fecha = getXmlValue(xmlDoc, "fechaCreacion");
+        
+        // Tags
+        let tagsList = [];
+        const tags = xmlDoc.querySelectorAll("tag, p\\:tag");
+        tags.forEach(t => tagsList.push(t.textContent));
+
+        const postCard = document.createElement('div');
+        postCard.className = 'card post';
+        postCard.innerHTML = `
+            <div class="post-header">
+                <span class="post-id">Autor ID: ${idAutor}</span>
+                <span>${fecha}</span>
+            </div>
+            <div class="post-content">
+                ${contenido}
+            </div>
+            <div class="post-footer">
+                ${tagsList.map(t => `<span class="tag">${t}</span>`).join(' ')}
+            </div>
+        `;
+        feedContainer.appendChild(postCard);
+    });
+}
+
+// EJECUTAR AL CARGAR: Si la sección del feed está visible, carga los posts inmediatamente
+window.addEventListener('DOMContentLoaded', () => {
+    if (appSection.classList.contains('active')) {
+        loadPosts();
+    }
+});
