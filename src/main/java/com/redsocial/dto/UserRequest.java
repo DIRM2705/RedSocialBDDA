@@ -6,7 +6,6 @@ public class UserRequest
 {
     @NotBlank(message = "El nombre de usuario no puede estar vacío")
     private String username;
-    @NotBlank(message = "El correo electrónico no puede estar vacío")
     private String email;
     @NotBlank(message = "La contraseña no puede estar vacía")
     private String password;
