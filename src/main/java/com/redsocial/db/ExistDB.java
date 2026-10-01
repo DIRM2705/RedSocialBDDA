@@ -1,8 +1,5 @@
 package com.redsocial.db;
 
-import com.redsocial.exception.DBException;
-import com.redsocial.exception.ResourceNotFoundException;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.xmldb.api.DatabaseManager;
@@ -10,11 +7,16 @@ import org.xmldb.api.base.Collection;
 import org.xmldb.api.base.Database;
 import org.xmldb.api.base.XMLDBException;
 
+import com.redsocial.exception.DBException;
+import com.redsocial.exception.ResourceNotFoundException;
+
+import jakarta.annotation.PostConstruct;
+
 @Component
 public class ExistDB {
 
-    @Value("${EXIST_BASE_URI}")
-    private String baseUri;
+   @Value("${EXIST_BASE_URI}")
+private String baseUri;
 
     @Value("${EXIST_USER}")
     private String user;
